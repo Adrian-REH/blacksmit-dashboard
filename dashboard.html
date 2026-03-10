@@ -575,6 +575,52 @@ header::after {
 .connecting-anim span:nth-child(3) { animation-delay: 0.4s; }
 @keyframes bounceDot { 0%,100%{transform:translateY(0);opacity:0.4} 50%{transform:translateY(-6px);opacity:1} }
 
+/* ── GUIDE ─────────────────────────────────────────────────── */
+.overlay-guide {
+  display: flex; gap: 0; align-items: flex-start;
+  background: rgba(14,24,32,0.8); border: 1px solid var(--border2);
+  border-radius: 4px; padding: 18px 22px; max-width: 740px; width: 100%;
+}
+.guide-steps { display: flex; gap: 0; flex: 1; }
+.guide-step {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  gap: 8px; padding: 0 12px; position: relative;
+}
+.guide-step:not(:last-child)::after {
+  content: '▶'; position: absolute; right: -8px; top: 8px;
+  font-size: 9px; color: var(--border2);
+}
+.guide-step-num {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 1px solid var(--accent2); background: rgba(232,160,48,0.08);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--cond); font-weight: 700; font-size: 14px; color: var(--accent);
+}
+.guide-step-title {
+  font-family: var(--cond); font-weight: 700; font-size: 11px;
+  letter-spacing: 1.5px; color: var(--accent); text-transform: uppercase; text-align: center;
+}
+.guide-step-body {
+  font-family: var(--mono); font-size: 10px; color: var(--text2);
+  text-align: center; line-height: 1.65;
+}
+.guide-step-body code {
+  color: var(--cyan); background: rgba(64,216,208,0.08);
+  padding: 1px 5px; border-radius: 2px; font-size: 10px;
+}
+.guide-divider { width: 1px; background: var(--border); align-self: stretch; margin: 0 2px; flex-shrink: 0; }
+
+/* ── DOWNLOAD BTN ──────────────────────────────────────────── */
+.download-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--cond); font-weight: 700; font-size: 13px;
+  letter-spacing: 2px; padding: 9px 22px;
+  border: 1px solid var(--green); background: rgba(45,220,122,0.06);
+  color: var(--green); cursor: pointer; text-transform: uppercase;
+  transition: all 0.2s; border-radius: 2px; text-decoration: none;
+}
+.download-btn:hover { background: var(--green); color: var(--bg); box-shadow: 0 0 14px rgba(45,220,122,0.35); }
+
 /* ── DIVIDER ───────────────────────────────────────────────── */
 .section-divider { height: 1px; background: linear-gradient(90deg, var(--accent2) 0%, transparent 100%); margin: 8px 0; opacity: 0.3; }
 
@@ -591,6 +637,68 @@ header::after {
 <div id="overlay">
   <div class="overlay-title">Blacksmith</div>
   <div class="overlay-sub">TELEMETRY DASHBOARD — Sistema de Herrería</div>
+
+  <!-- GUÍA DE USO -->
+  <div class="overlay-guide">
+    <div class="guide-steps">
+
+      <div class="guide-step">
+        <div class="guide-step-num">1</div>
+        <div class="guide-step-title">Descarga el juego</div>
+        <div class="guide-step-body">
+          Descarga e instala<br>
+          <strong style="color:var(--text)">Blacksmith</strong><br>
+          en tu ordenador
+        </div>
+      </div>
+
+      <div class="guide-divider"></div>
+
+      <div class="guide-step">
+        <div class="guide-step-num">2</div>
+        <div class="guide-step-title">Abre el juego</div>
+        <div class="guide-step-body">
+          Inicia el juego.<br>
+          Verás un código<br>
+          tipo <code>ABC-1234</code>
+        </div>
+      </div>
+
+      <div class="guide-divider"></div>
+
+      <div class="guide-step">
+        <div class="guide-step-num">3</div>
+        <div class="guide-step-title">Introduce el código</div>
+        <div class="guide-step-body">
+          Escribe la URL del<br>servidor y el código<br>
+          en los campos de abajo
+        </div>
+      </div>
+
+      <div class="guide-divider"></div>
+
+      <div class="guide-step">
+        <div class="guide-step-num">4</div>
+        <div class="guide-step-title">Conectar</div>
+        <div class="guide-step-body">
+          Pulsa <strong style="color:var(--accent)">CONECTAR</strong>.<br>
+          Los datos del juego<br>
+          aparecerán en tiempo real
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- DESCARGA -->
+  <a class="download-btn" href="#" id="btn-download" download>
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M7 1v8M4 6l3 3 3-3M2 11h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    Descargar juego
+  </a>
+
+  <!-- CONEXIÓN -->
   <div class="overlay-form">
     <input class="overlay-input" id="url-input" type="text" value="ws://blacksmit-dashboard.onrender.com" placeholder="ws://blacksmit-dashboard.onrender.com" style="flex:2" />
     <input class="overlay-input" id="code-input" type="text" placeholder="Código de sala (ej. ABC-1234)" style="flex:1;letter-spacing:2px;text-transform:uppercase" maxlength="8" />
@@ -878,23 +986,86 @@ const latencyHistory    = { avg:[], p50:[], p98:[], p99:[], ts:[] };
 const MAX_CHART_PTS     = 60;
 
 /* ── WS CONNECTION ──────────────────────────────────────────── */
+
+// URL activa (incluye ?code=). Se guarda al conectar para poder reconectar sin input del usuario.
+let activeWsUrl       = null;
+let reconnectTimer    = null;
+let reconnectAttempts = 0;
+let manualDisconnect  = false;
+const MAX_RECONNECT   = 20;
+
 function connect(wsUrl) {
   if (ws) { ws.onclose = null; ws.close(); }
+  activeWsUrl    = wsUrl;
+  manualDisconnect = false;
+  clearReconnectTimer();
+
   setWsStatus('connecting');
   setOverlayConnecting(true);
+
   ws = new WebSocket(wsUrl);
-  ws.onopen = () => { setWsStatus('connected'); hideOverlay(); addLog('info', 'WS', `Conectado a ${wsUrl}`); };
+
+  ws.onopen = () => {
+    reconnectAttempts = 0;
+    setWsStatus('connected');
+    hideOverlay();
+    addLog('info', 'WS', `Conectado a ${wsUrl}`);
+  };
+
   ws.onmessage = (ev) => {
     try { handleMessage(JSON.parse(ev.data)); }
     catch(e) { addLog('error', 'PARSE', e.message); }
   };
-  ws.onerror = () => { addLog('error', 'WS', 'Error de conexión'); setOverlayError('No se pudo conectar al servidor WebSocket'); };
-  ws.onclose = () => { setWsStatus('disconnected'); addLog('warn', 'WS', 'Conexión cerrada'); showOverlay(); };
+
+  ws.onerror = () => {
+    addLog('error', 'WS', 'Error de conexión');
+    // El error va seguido de onclose, que gestiona la reconexión
+  };
+
+  ws.onclose = () => {
+    setWsStatus('disconnected');
+
+    if (manualDisconnect) {
+      // El usuario pidió desconectarse → mostrar overlay normalmente
+      showOverlay();
+      return;
+    }
+
+    // Caída involuntaria → reconectar sin mostrar el overlay completo
+    addLog('warn', 'WS', 'Conexión perdida. Reconectando automáticamente...');
+    scheduleReconnect();
+  };
+}
+
+function scheduleReconnect() {
+  if (reconnectAttempts >= MAX_RECONNECT) {
+    addLog('error', 'WS', `No se pudo reconectar tras ${MAX_RECONNECT} intentos. Recarga la página o introduce el código de nuevo.`);
+    setOverlayError(`Sin conexión tras ${MAX_RECONNECT} intentos. Introduce el código de nuevo.`);
+    showOverlay();
+    return;
+  }
+
+  // Backoff exponencial: 1s, 2s, 4s, 8s… máx 30s
+  const delay = Math.min(Math.pow(2, reconnectAttempts) * 1000, 30000);
+  reconnectAttempts++;
+
+  addLog('warn', 'WS', `Reintento ${reconnectAttempts}/${MAX_RECONNECT} en ${(delay/1000).toFixed(0)}s…`);
+
+  reconnectTimer = setTimeout(() => {
+    if (!manualDisconnect && activeWsUrl) connect(activeWsUrl);
+  }, delay);
+}
+
+function clearReconnectTimer() {
+  if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
 }
 
 function disconnect() {
+  manualDisconnect = true;
+  clearReconnectTimer();
   if (ws) { ws.onclose = null; ws.close(); ws = null; }
-  setWsStatus('disconnected'); showOverlay();
+  setWsStatus('disconnected');
+  showOverlay();
 }
 
 /* ── MESSAGE HANDLER ────────────────────────────────────────── */
@@ -1298,6 +1469,20 @@ document.getElementById('btn-disconnect').addEventListener('click', disconnect);
 document.getElementById('btn-clear-log').addEventListener('click', () => { logCount = 0; logFeed.innerHTML = '<div class="empty-state"><div class="icon">📡</div><span>Log limpiado</span></div>'; });
 
 window.addEventListener('resize', drawChart);
+
+// ── DESCARGA DEL JUEGO ───────────────────────────────────────
+// Cambia esta URL por el enlace real al ejecutable del juego
+const GAME_DOWNLOAD_URL = './blacksmith-game.zip'; // ← pon aquí tu enlace
+const btnDownload = document.getElementById('btn-download');
+if (btnDownload) {
+  btnDownload.href = GAME_DOWNLOAD_URL;
+  // Si es una URL externa (itch.io, Drive, etc.) quitar el atributo download
+  if (GAME_DOWNLOAD_URL.startsWith('http')) {
+    btnDownload.removeAttribute('download');
+    btnDownload.target = '_blank';
+    btnDownload.rel    = 'noopener noreferrer';
+  }
+}
 updateThroughputBars(0);
 </script>
 </body>
