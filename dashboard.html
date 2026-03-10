@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BLACKSMITH — Telemetry Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700;900&family=Barlow:wght@300;400&display=swap" rel="stylesheet">
+<style>
+/* ── RESET & VARIABLES ─────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:         #080c0e;
+  --bg2:        #0d1317;
+  --bg3:        #121a1f;
+  --panel:      #0f1922;
+  --border:     #1e2d35;
+  --border2:    #2a3d48;
+  --accent:     #e8a030;
+  --accent2:    #c0722a;
+  --green:      #2ddc7a;
+  --red:        #f04040;
+  --yellow:     #f0c040;
+  --blue:       #40b0f0;
+  --cyan:       #40d8d0;
+  --orange:     #f07840;
+  --dim:        #3a5060;
+  --text:       #c8dce8;
+  --text2:      #7a9aaa;
+  --text3:      #3a5560;
+  --mono:       'Share Tech Mono', monospace;
+  --cond:       'Barlow Condensed', sans-serif;
+  --body:       'Barlow', sans-serif;
+  --glow:       0 0 12px rgba(232,160,48,0.4);
+  --glow-green: 0 0 12px rgba(45,220,122,0.4);
+  --glow-red:   0 0 12px rgba(240,64,64,0.4);
+  --glow-orange:0 0 12px rgba(240,120,64,0.4);
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  overflow: hidden;
+}
+
+/* ── SCANLINE OVERLAY ──────────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 2px,
+    rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ── GRID LAYOUT ───────────────────────────────────────────── */
+#app {
+  display: grid;
+  grid-template-rows: 56px 1fr;
+  grid-template-columns: 280px 1fr 320px;
+  height: 100vh;
+  gap: 0;
+}
+
+/* ── HEADER ────────────────────────────────────────────────── */
+header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 20px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+
+header::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 100%; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0.6;
+}
+
+.logo {
+  font-family: var(--cond);
+  font-weight: 900;
+  font-size: 22px;
+  letter-spacing: 4px;
+  color: var(--accent);
+  text-shadow: var(--glow);
+  text-transform: uppercase;
+}
+.logo span { color: var(--text2); font-weight: 300; }
+
+.header-sep { width: 1px; height: 28px; background: var(--border2); }
+
+.ws-status {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 11px; color: var(--text2);
+}
+
+.ws-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--red); transition: background 0.3s;
+  box-shadow: 0 0 8px currentColor;
+}
+.ws-dot.connected  { background: var(--green); }
+.ws-dot.connecting { background: var(--yellow); animation: pulse 1s infinite; }
+
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.header-stats { display: flex; gap: 20px; margin-left: auto; }
+.hstat {
+  font-family: var(--mono); font-size: 11px; color: var(--text3);
+  display: flex; flex-direction: column; align-items: flex-end;
+}
+.hstat .val { font-size: 14px; color: var(--text); transition: color 0.3s; }
+.hstat .val.flash { color: var(--accent); }
+
+.ws-url-input {
+  background: var(--bg3); border: 1px solid var(--border2);
+  color: var(--text2); font-family: var(--mono); font-size: 11px;
+  padding: 4px 8px; border-radius: 2px; width: 240px;
+  outline: none; transition: border-color 0.2s;
+}
+.ws-url-input:focus { border-color: var(--accent); color: var(--text); }
+
+.btn {
+  font-family: var(--cond); font-size: 12px; font-weight: 600;
+  letter-spacing: 1px; padding: 4px 12px; border: 1px solid var(--border2);
+  background: transparent; color: var(--text2); cursor: pointer;
+  transition: all 0.2s; text-transform: uppercase;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn.primary { border-color: var(--accent); color: var(--accent); }
+.btn.primary:hover { background: var(--accent); color: var(--bg); }
+.btn.danger  { border-color: var(--red); color: var(--red); }
+.btn.danger:hover { background: var(--red); color: var(--bg); }
+
+/* ── COLUMNS ───────────────────────────────────────────────── */
+#col-left   { border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+#col-center { display: flex; flex-direction: column; overflow: hidden; }
+#col-right  { border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+
+/* ── LEFT SCROLL WRAPPER ───────────────────────────────────── */
+#col-left-scroll {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── PANEL ─────────────────────────────────────────────────── */
+.panel { background: var(--panel); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+
+.panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 14px; border-bottom: 1px solid var(--border);
+  background: var(--bg3);
+}
+
+.panel-title {
+  font-family: var(--cond); font-size: 11px; font-weight: 700;
+  letter-spacing: 2px; color: var(--text2); text-transform: uppercase;
+}
+
+.panel-badge {
+  font-family: var(--mono); font-size: 10px; padding: 1px 6px;
+  background: var(--bg); border: 1px solid var(--border2);
+  color: var(--text3); border-radius: 2px;
+}
+.panel-badge.alert  { border-color: var(--red);    color: var(--red);    animation: pulse 1.5s infinite; }
+.panel-badge.warn   { border-color: var(--yellow);  color: var(--yellow); }
+.panel-badge.ok     { border-color: var(--green);   color: var(--green);  }
+.panel-badge.orange { border-color: var(--orange);  color: var(--orange); }
+
+.panel-body { padding: 12px 14px; }
+
+/* ── METRIC ROW ────────────────────────────────────────────── */
+.metric-row {
+  display: flex; align-items: baseline; justify-content: space-between;
+  padding: 3px 0; border-bottom: 1px solid rgba(30,45,53,0.6);
+}
+.metric-label {
+  font-family: var(--mono); font-size: 10px; color: var(--text3);
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.metric-value {
+  font-family: var(--mono); font-size: 13px; color: var(--text);
+  transition: color 0.3s;
+}
+.metric-value.good   { color: var(--green); }
+.metric-value.warn   { color: var(--yellow); }
+.metric-value.danger { color: var(--red); }
+.metric-value.accent { color: var(--accent); }
+.metric-value.cyan   { color: var(--cyan); }
+.metric-value.blue   { color: var(--blue); }
+.metric-value.orange { color: var(--orange); }
+
+/* ── PROGRESS BAR ──────────────────────────────────────────── */
+.bar-wrap { margin: 6px 0; }
+.bar-label-row {
+  display: flex; justify-content: space-between;
+  font-family: var(--mono); font-size: 10px; color: var(--text3); margin-bottom: 3px;
+}
+.bar-track {
+  height: 5px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 1px; overflow: hidden;
+}
+.bar-fill {
+  height: 100%; background: var(--accent); border-radius: 1px;
+  transition: width 0.5s ease, background 0.3s;
+}
+.bar-fill.green  { background: var(--green);  box-shadow: var(--glow-green); }
+.bar-fill.red    { background: var(--red);    box-shadow: var(--glow-red); }
+.bar-fill.yellow { background: var(--yellow); }
+.bar-fill.blue   { background: var(--blue); }
+.bar-fill.orange { background: var(--orange); box-shadow: var(--glow-orange); }
+
+/* ── ORE RETRY METRICS ─────────────────────────────────────── */
+.ore-retry-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+  margin-bottom: 10px;
+  border: 1px solid var(--border);
+}
+
+.ore-retry-stat {
+  background: var(--bg3);
+  padding: 7px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ore-retry-stat-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ore-retry-stat-val {
+  font-family: var(--mono);
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--text);
+  transition: color 0.3s;
+}
+
+.ore-retry-stat-val.orange { color: var(--orange); text-shadow: var(--glow-orange); }
+.ore-retry-stat-val.red    { color: var(--red);    text-shadow: var(--glow-red); }
+.ore-retry-stat-val.cyan   { color: var(--cyan); }
+.ore-retry-stat-val.green  { color: var(--green); }
+
+/* ── PENDING ORES TABLE ─────────────────────────────────────── */
+.pending-ores-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
+.pending-ores-title {
+  font-family: var(--cond);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--text3);
+  text-transform: uppercase;
+}
+
+#pending-ores-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 110px;
+  overflow-y: auto;
+}
+
+.pending-ore-row {
+  display: grid;
+  grid-template-columns: 38px 1fr 1fr 1fr;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--dim);
+  font-family: var(--mono);
+  font-size: 9px;
+  transition: border-left-color 0.3s;
+  animation: oreIn 0.25s ease;
+}
+
+@keyframes oreIn {
+  from { opacity: 0; transform: translateX(-4px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.pending-ore-row.attempt-1 { border-left-color: var(--yellow); }
+.pending-ore-row.attempt-2 { border-left-color: var(--orange); }
+.pending-ore-row.attempt-3plus { border-left-color: var(--red); animation: pulse 1.5s infinite; }
+
+.ore-id   { color: var(--accent); font-size: 10px; }
+.ore-att  { color: var(--text2); }
+.ore-idle { color: var(--text3); }
+.ore-att span  { color: var(--text); }
+.ore-idle span { color: var(--cyan); }
+
+.ore-progress-mini {
+  height: 3px;
+  background: var(--border);
+  border-radius: 1px;
+  overflow: hidden;
+}
+.ore-progress-fill {
+  height: 100%;
+  border-radius: 1px;
+  transition: width 0.4s ease;
+}
+
+.no-pending {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+  text-align: center;
+  padding: 12px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.no-pending::before {
+  content: '✓';
+  color: var(--green);
+  font-size: 12px;
+}
+
+/* ── WORKERS GRID ──────────────────────────────────────────── */
+#workers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+  padding: 12px 14px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.worker-card {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  padding: 8px 10px;
+  position: relative;
+  transition: border-color 0.3s;
+  cursor: default;
+}
+
+.worker-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 3px; height: 100%;
+  background: var(--dim);
+  transition: background 0.3s;
+}
+
+.worker-card.active::before   { background: var(--green);  box-shadow: var(--glow-green); }
+.worker-card.stunned::before  { background: var(--red);    box-shadow: var(--glow-red); animation: pulse 1s infinite; }
+.worker-card.draining::before { background: var(--yellow); }
+.worker-card.resting::before  { background: var(--dim); }
+.worker-card.inactive         { opacity: 0.35; }
+
+.worker-id {
+  font-family: var(--cond); font-size: 11px; font-weight: 700;
+  letter-spacing: 1px; color: var(--text2); text-transform: uppercase;
+  margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.worker-state {
+  font-family: var(--mono); font-size: 10px;
+  color: var(--accent); margin-bottom: 2px;
+}
+.worker-state.stunned  { color: var(--red); }
+.worker-state.draining { color: var(--yellow); }
+.worker-state.resting  { color: var(--dim); }
+.worker-state.idle     { color: var(--text3); }
+
+.worker-tasks { font-family: var(--mono); font-size: 9px; color: var(--text3); }
+
+/* ── WORKER PICK FAILS ─────────────────────────────────────── */
+.worker-pick-fails {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+.pick-fail-label {
+  font-family: var(--mono);
+  font-size: 8px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex: 1;
+}
+
+.pick-fail-dots {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+
+.pick-fail-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--border2);
+  transition: background 0.3s;
+}
+.pick-fail-dot.filled-1 { background: var(--yellow); }
+.pick-fail-dot.filled-2 { background: var(--orange); }
+.pick-fail-dot.filled-3 { background: var(--red); box-shadow: var(--glow-red); }
+
+.pick-fail-count {
+  font-family: var(--mono);
+  font-size: 9px;
+  min-width: 14px;
+  text-align: right;
+}
+.pick-fail-count.ok     { color: var(--text3); }
+.pick-fail-count.warn   { color: var(--yellow); }
+.pick-fail-count.danger { color: var(--red); }
+
+/* ── EVALUATION SCORES ─────────────────────────────────────── */
+.eval-section { margin-bottom: 14px; }
+
+.eval-tier {
+  font-family: var(--cond); font-size: 10px; font-weight: 700;
+  letter-spacing: 2px; padding: 4px 0 6px; text-transform: uppercase;
+  border-bottom: 1px solid var(--border); margin-bottom: 8px;
+  display: flex; align-items: center; gap: 8px;
+}
+.eval-tier .tier-dot { width: 6px; height: 6px; border-radius: 50%; }
+.eval-tier.junior .tier-dot  { background: var(--green); }
+.eval-tier.middle .tier-dot  { background: var(--yellow); }
+.eval-tier.senior .tier-dot  { background: var(--red); }
+.eval-tier .tier-score { margin-left: auto; font-family: var(--mono); font-size: 16px; font-weight: 400; }
+.eval-tier.junior .tier-score { color: var(--green); }
+.eval-tier.middle .tier-score { color: var(--yellow); }
+.eval-tier.senior .tier-score { color: var(--red); }
+
+.eval-bar-row { display: flex; align-items: center; gap: 8px; }
+.eval-bar-label { font-family: var(--mono); font-size: 9px; color: var(--text3); width: 90px; flex-shrink: 0; text-transform: uppercase; }
+.eval-bar-track { flex: 1; height: 3px; background: var(--bg); border: 1px solid var(--border); }
+.eval-bar-fill  { height: 100%; transition: width 0.6s ease; }
+.eval-bar-val   { font-family: var(--mono); font-size: 9px; color: var(--text2); width: 30px; text-align: right; flex-shrink: 0; }
+.eval-metric    { margin: 4px 0; }
+
+/* ── LATENCY CHART ─────────────────────────────────────────── */
+#latency-chart-wrap {
+  padding: 0 14px 12px;
+  flex: 1; min-height: 0;
+  display: flex; flex-direction: column;
+}
+#latency-canvas { width: 100%; flex: 1; min-height: 0; display: block; }
+
+.chart-legend { display: flex; gap: 12px; padding: 6px 0 2px; flex-shrink: 0; }
+.legend-item  { display: flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 9px; color: var(--text3); }
+.legend-dot   { width: 6px; height: 6px; border-radius: 50%; }
+
+/* ── LOG FEED ──────────────────────────────────────────────── */
+#log-feed {
+  flex: 1; overflow-y: auto; padding: 0;
+  font-family: var(--mono); font-size: 10px; background: var(--bg);
+}
+
+.log-entry {
+  display: grid; grid-template-columns: 60px 70px 1fr;
+  gap: 8px; padding: 3px 14px;
+  border-bottom: 1px solid rgba(30,45,53,0.4);
+  animation: logIn 0.2s ease;
+}
+@keyframes logIn {
+  from { background: rgba(232,160,48,0.06); }
+  to   { background: transparent; }
+}
+.log-entry:hover { background: rgba(255,255,255,0.02); }
+.log-ts  { color: var(--text3); }
+.log-cat { color: var(--text2); }
+.log-msg { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.log-entry.error .log-cat { color: var(--red); }
+.log-entry.error .log-msg { color: var(--red); }
+.log-entry.warn  .log-cat { color: var(--yellow); }
+.log-entry.warn  .log-msg { color: var(--yellow); }
+.log-entry.info  .log-cat { color: var(--green); }
+
+/* ── EMPTY STATE ───────────────────────────────────────────── */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; height: 100%; gap: 8px;
+  color: var(--text3); font-family: var(--mono); font-size: 11px;
+}
+.empty-state .icon { font-size: 32px; opacity: 0.3; }
+
+/* ── SCROLLBAR ─────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--dim); }
+
+/* ── BIG SCORE ─────────────────────────────────────────────── */
+.big-metrics {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 1px; background: var(--border); flex-shrink: 0;
+}
+.big-metric {
+  background: var(--panel); padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.big-metric-label { font-family: var(--cond); font-size: 10px; font-weight: 600; letter-spacing: 2px; color: var(--text3); text-transform: uppercase; }
+.big-metric-value {
+  font-family: var(--cond); font-weight: 700; font-size: 36px;
+  line-height: 1; color: var(--accent); transition: color 0.4s; text-shadow: var(--glow);
+}
+.big-metric-sub { font-family: var(--mono); font-size: 9px; color: var(--text3); }
+
+/* ── THROUGHPUT INDICATOR ──────────────────────────────────── */
+.throughput-indicator { display: flex; align-items: center; gap: 6px; padding: 4px 0; }
+.tp-bars { display: flex; gap: 2px; align-items: flex-end; height: 20px; }
+.tp-bar { width: 4px; background: var(--dim); border-radius: 1px; transition: height 0.4s ease, background 0.3s; min-height: 2px; }
+
+/* ── CONNECTION OVERLAY ────────────────────────────────────── */
+#overlay {
+  position: fixed; inset: 0; background: rgba(8,12,14,0.92);
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 16px; z-index: 100; backdrop-filter: blur(4px);
+}
+#overlay.hidden { display: none; }
+.overlay-title { font-family: var(--cond); font-weight: 900; font-size: 32px; letter-spacing: 6px; color: var(--accent); text-shadow: var(--glow); text-transform: uppercase; }
+.overlay-sub   { font-family: var(--mono); font-size: 12px; color: var(--text2); }
+.overlay-form  { display: flex; gap: 8px; align-items: center; }
+.overlay-input {
+  background: var(--bg3); border: 1px solid var(--border2); color: var(--text);
+  font-family: var(--mono); font-size: 13px; padding: 8px 14px; width: 340px;
+  outline: none; border-radius: 2px; transition: border-color 0.2s;
+}
+.overlay-input:focus { border-color: var(--accent); }
+.connect-btn {
+  font-family: var(--cond); font-weight: 700; font-size: 14px; letter-spacing: 2px;
+  padding: 8px 24px; border: 1px solid var(--accent); background: transparent;
+  color: var(--accent); cursor: pointer; text-transform: uppercase;
+  transition: all 0.2s; border-radius: 2px;
+}
+.connect-btn:hover { background: var(--accent); color: var(--bg); box-shadow: var(--glow); }
+.overlay-error { font-family: var(--mono); font-size: 11px; color: var(--red); min-height: 16px; }
+.connecting-anim { display: flex; gap: 4px; align-items: center; }
+.connecting-anim span { display: inline-block; width: 6px; height: 6px; background: var(--accent); border-radius: 50%; animation: bounceDot 1.2s infinite; }
+.connecting-anim span:nth-child(2) { animation-delay: 0.2s; }
+.connecting-anim span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes bounceDot { 0%,100%{transform:translateY(0);opacity:0.4} 50%{transform:translateY(-6px);opacity:1} }
+
+/* ── DIVIDER ───────────────────────────────────────────────── */
+.section-divider { height: 1px; background: linear-gradient(90deg, var(--accent2) 0%, transparent 100%); margin: 8px 0; opacity: 0.3; }
+
+/* ── TAG ───────────────────────────────────────────────────── */
+.tag { font-family: var(--mono); font-size: 9px; padding: 2px 6px; border-radius: 2px; border: 1px solid; display: inline-block; }
+.tag.bounded   { color: var(--yellow); border-color: var(--yellow); background: rgba(240,192,64,0.08); }
+.tag.unbounded { color: var(--blue);   border-color: var(--blue);   background: rgba(64,176,240,0.08); }
+.tag.dropoldest{ color: var(--red);    border-color: var(--red);    background: rgba(240,64,64,0.08); }
+</style>
+</head>
+<body>
+
+<!-- CONNECTION OVERLAY -->
+<div id="overlay">
+  <div class="overlay-title">Blacksmith</div>
+  <div class="overlay-sub">TELEMETRY DASHBOARD — Sistema de Herrería</div>
+  <div class="overlay-form">
+    <input class="overlay-input" id="url-input" type="text" value="ws://localhost:8080" placeholder="ws://localhost:8080" style="flex:2" />
+    <input class="overlay-input" id="code-input" type="text" placeholder="Código de sala (ej. ABC-1234)" style="flex:1;letter-spacing:2px;text-transform:uppercase" maxlength="8" />
+    <button class="connect-btn" id="btn-connect-overlay">CONECTAR</button>
+  </div>
+  <div id="overlay-error" class="overlay-error"></div>
+  <div id="connecting-anim" class="connecting-anim" style="display:none">
+    <span></span><span></span><span></span>
+    <span style="font-family:var(--mono);font-size:11px;color:var(--text2);margin-left:8px">Conectando...</span>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">Blacksmith <span>/ Telemetry</span></div>
+    <div class="header-sep"></div>
+    <div class="ws-status">
+      <div class="ws-dot" id="ws-dot"></div>
+      <span id="ws-label">Desconectado</span>
+    </div>
+    <input class="ws-url-input" id="header-url" type="text" value="ws://localhost:8080" placeholder="ws://..." />
+    <input class="ws-url-input" id="header-code" type="text" placeholder="Código sala" style="width:110px;letter-spacing:2px;text-transform:uppercase" maxlength="8" />
+    <button class="btn primary" id="btn-reconnect">RECONECTAR</button>
+    <button class="btn danger"  id="btn-disconnect">DESCONECTAR</button>
+
+    <div class="header-stats">
+      <div class="hstat"><span>SNAPSHOTS</span><span class="val" id="h-snapshots">0</span></div>
+      <div class="hstat"><span>ÚLTIMO</span><span class="val" id="h-last">—</span></div>
+      <div class="hstat"><span>WORKERS</span><span class="val" id="h-workers">—</span></div>
+    </div>
+  </header>
+
+  <!-- LEFT COLUMN -->
+  <div id="col-left">
+    <div id="col-left-scroll">
+
+      <!-- ORE CONTAINER -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Ore Container</span>
+          <span class="panel-badge" id="ore-policy-badge">—</span>
+        </div>
+        <div class="panel-body">
+          <div class="metric-row"><span class="metric-label">Mineral</span><span class="metric-value accent" id="ore-count">—</span></div>
+          <div class="metric-row"><span class="metric-label">Capacidad efectiva</span><span class="metric-value" id="ore-cap">—</span></div>
+          <div class="metric-row"><span class="metric-label">Descartados total</span><span class="metric-value warn" id="ore-dropped">—</span></div>
+          <div class="section-divider"></div>
+          <div class="bar-wrap">
+            <div class="bar-label-row"><span>LLENADO</span><span id="ore-fill-pct">0%</span></div>
+            <div class="bar-track"><div class="bar-fill" id="ore-fill-bar" style="width:0%"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ORE RETRY METRICS (NEW) -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Ore Retry Metrics</span>
+          <span class="panel-badge" id="retry-badge">—</span>
+        </div>
+        <div class="panel-body">
+          <!-- Summary stats grid -->
+          <div class="ore-retry-summary">
+            <div class="ore-retry-stat">
+              <span class="ore-retry-stat-label">Tracked</span>
+              <span class="ore-retry-stat-val cyan" id="retry-tracked">—</span>
+            </div>
+            <div class="ore-retry-stat">
+              <span class="ore-retry-stat-label">Expirados</span>
+              <span class="ore-retry-stat-val red" id="retry-expired">—</span>
+            </div>
+            <div class="ore-retry-stat">
+              <span class="ore-retry-stat-label">Idle Thresh.</span>
+              <span class="ore-retry-stat-val orange" id="retry-idle-thresh">—</span>
+            </div>
+            <div class="ore-retry-stat">
+              <span class="ore-retry-stat-label">Max Retries</span>
+              <span class="ore-retry-stat-val green" id="retry-max">—</span>
+            </div>
+          </div>
+
+          <!-- Bar: expired ratio -->
+          <div class="bar-wrap">
+            <div class="bar-label-row">
+              <span>TASA EXPIRACIÓN</span>
+              <span id="retry-exp-pct">—</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill red" id="retry-exp-bar" style="width:0%"></div>
+            </div>
+          </div>
+
+          <div class="section-divider"></div>
+
+          <!-- Pending ores list -->
+          <div class="pending-ores-header">
+            <span class="pending-ores-title">⏳ Pending Ores</span>
+            <span class="panel-badge" id="pending-count-badge">0</span>
+          </div>
+          <div id="pending-ores-list">
+            <div class="no-pending">Ningún ore pendiente</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LATENCY METRICS -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Latencia &amp; Throughput</span>
+          <span class="panel-badge ok" id="sys-status-badge">—</span>
+        </div>
+        <div class="panel-body">
+          <div class="metric-row"><span class="metric-label">Latencia media</span><span class="metric-value cyan" id="lat-avg">—</span></div>
+          <div class="metric-row"><span class="metric-label">P50</span><span class="metric-value" id="lat-p50">—</span></div>
+          <div class="metric-row"><span class="metric-label">P98</span><span class="metric-value warn" id="lat-p98">—</span></div>
+          <div class="metric-row"><span class="metric-label">P99</span><span class="metric-value danger" id="lat-p99">—</span></div>
+          <div class="section-divider"></div>
+          <div class="metric-row">
+            <span class="metric-label">Throughput</span>
+            <div class="throughput-indicator">
+              <div class="tp-bars" id="tp-bars"></div>
+              <span class="metric-value blue" id="lat-throughput">—</span>
+            </div>
+          </div>
+          <div class="bar-wrap" style="margin-top:8px">
+            <div class="bar-label-row"><span>MARGEN SEGURIDAD</span><span id="margin-pct">—</span></div>
+            <div class="bar-track"><div class="bar-fill green" id="margin-bar" style="width:0%"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ARMOURY CONFIG -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Armoury Batch</span>
+          <span class="panel-badge" id="armoury-badge">—</span>
+        </div>
+        <div class="panel-body">
+          <div class="metric-row"><span class="metric-label">Wait máx</span><span class="metric-value" id="arm-wait">—</span></div>
+          <div class="metric-row"><span class="metric-label">Batch máx</span><span class="metric-value" id="arm-batch">—</span></div>
+          <div class="metric-row"><span class="metric-label">Tamaño mín arma</span><span class="metric-value" id="arm-size">—</span></div>
+          <div class="metric-row"><span class="metric-label">Prob. fallo</span><span class="metric-value warn" id="arm-fail">—</span></div>
+          <div class="metric-row"><span class="metric-label">Ratio ECONNRESET</span><span class="metric-value danger" id="arm-econn">—</span></div>
+          <div class="metric-row"><span class="metric-label">Auto-retries</span><span class="metric-value" id="arm-retries">—</span></div>
+        </div>
+      </div>
+
+    </div><!-- /col-left-scroll -->
+  </div><!-- /col-left -->
+
+  <!-- CENTER COLUMN -->
+  <div id="col-center">
+
+    <!-- BIG SCORES -->
+    <div class="big-metrics">
+      <div class="big-metric">
+        <span class="big-metric-label">🟢 Junior</span>
+        <span class="big-metric-value" id="score-junior" style="color:var(--green);text-shadow:var(--glow-green)">—</span>
+        <span class="big-metric-sub">Resolución · Implementación · Calidad</span>
+      </div>
+      <div class="big-metric">
+        <span class="big-metric-label">🟡 Middle</span>
+        <span class="big-metric-value" id="score-middle" style="color:var(--yellow)">—</span>
+        <span class="big-metric-sub">Optimización · Testing · Comunicación</span>
+      </div>
+      <div class="big-metric">
+        <span class="big-metric-label">🔴 Senior</span>
+        <span class="big-metric-value" id="score-senior" style="color:var(--red);text-shadow:var(--glow-red)">—</span>
+        <span class="big-metric-sub">Diseño · Robustez · Escalabilidad</span>
+      </div>
+    </div>
+
+    <!-- WORKERS GRID -->
+    <div class="panel" style="flex:none">
+      <div class="panel-header">
+        <span class="panel-title">Worker Pool</span>
+        <span class="panel-badge" id="pool-badge">0 / 0</span>
+      </div>
+    </div>
+    <div id="workers-grid">
+      <div class="empty-state"><div class="icon">⚙</div><span>Sin datos de workers</span></div>
+    </div>
+
+    <!-- LATENCY CHART -->
+    <div class="panel" style="flex:none">
+      <div class="panel-header">
+        <span class="panel-title">Historial de Latencia</span>
+        <span class="panel-badge" id="chart-points">0 pts</span>
+      </div>
+    </div>
+    <div id="latency-chart-wrap">
+      <canvas id="latency-canvas"></canvas>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--cyan)"></div> Avg</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--text2)"></div> P50</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--yellow)"></div> P98</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div> P99</div>
+      </div>
+    </div>
+
+  </div><!-- /col-center -->
+
+  <!-- RIGHT COLUMN -->
+  <div id="col-right">
+
+    <!-- EVALUATION DETAIL -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Evaluación Detallada</span>
+      </div>
+      <div class="panel-body" id="eval-detail">
+        <div class="empty-state" style="height:120px"><span>Sin datos</span></div>
+      </div>
+    </div>
+
+    <!-- TELEMETRY ERRORS -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Errores por Categoría</span>
+        <span class="panel-badge alert" id="errors-total">0</span>
+      </div>
+      <div class="panel-body">
+        <div class="bar-wrap">
+          <div class="bar-label-row"><span>ARMOURY</span><span id="err-armoury">0</span></div>
+          <div class="bar-track"><div class="bar-fill red" id="err-armoury-bar" style="width:0%"></div></div>
+        </div>
+        <div class="bar-wrap">
+          <div class="bar-label-row"><span>WORKER</span><span id="err-worker">0</span></div>
+          <div class="bar-track"><div class="bar-fill yellow" id="err-worker-bar" style="width:0%"></div></div>
+        </div>
+        <div class="bar-wrap">
+          <div class="bar-label-row"><span>OBSERVER</span><span id="err-observer">0</span></div>
+          <div class="bar-track"><div class="bar-fill blue" id="err-observer-bar" style="width:0%"></div></div>
+        </div>
+        <div class="bar-wrap">
+          <div class="bar-label-row"><span>CONTAINER</span><span id="err-container">0</span></div>
+          <div class="bar-track"><div class="bar-fill" id="err-container-bar" style="width:0%"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- JITTER CONFIG -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Jitter Config</span>
+        <span class="panel-badge" id="craft-prob-badge">—</span>
+      </div>
+      <div class="panel-body">
+        <div class="metric-row"><span class="metric-label">Base retry</span><span class="metric-value" id="j-base">—</span></div>
+        <div class="metric-row"><span class="metric-label">Jitter máx</span><span class="metric-value" id="j-max">—</span></div>
+        <div class="metric-row"><span class="metric-label">Retry máx</span><span class="metric-value" id="j-retrymax">—</span></div>
+        <div class="metric-row"><span class="metric-label">Prob. creación</span><span class="metric-value" id="j-craftprob">—</span></div>
+        <div class="bar-wrap">
+          <div class="bar-label-row"><span>CRAFT SUCCESS RATIO</span><span id="j-ratio-pct">—</span></div>
+          <div class="bar-track"><div class="bar-fill green" id="j-ratio-bar" style="width:0%"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOG FEED -->
+    <div class="panel" style="flex:none">
+      <div class="panel-header">
+        <span class="panel-title">Event Log</span>
+        <button class="btn" id="btn-clear-log" style="font-size:9px;padding:2px 8px">LIMPIAR</button>
+      </div>
+    </div>
+    <div id="log-feed">
+      <div class="empty-state"><div class="icon">📡</div><span>Esperando eventos...</span></div>
+    </div>
+
+  </div><!-- /col-right -->
+
+</div><!-- /app -->
+
+<script>
+/* ── STATE ──────────────────────────────────────────────────── */
+let ws            = null;
+let snapshotCount = 0;
+let lastSnapshot  = null;
+const throughputHistory = Array(16).fill(0);
+const latencyHistory    = { avg:[], p50:[], p98:[], p99:[], ts:[] };
+const MAX_CHART_PTS     = 60;
+
+/* ── WS CONNECTION ──────────────────────────────────────────── */
+function connect(wsUrl) {
+  if (ws) { ws.onclose = null; ws.close(); }
+  setWsStatus('connecting');
+  setOverlayConnecting(true);
+  ws = new WebSocket(wsUrl);
+  ws.onopen = () => { setWsStatus('connected'); hideOverlay(); addLog('info', 'WS', `Conectado a ${wsUrl}`); };
+  ws.onmessage = (ev) => {
+    try { handleMessage(JSON.parse(ev.data)); }
+    catch(e) { addLog('error', 'PARSE', e.message); }
+  };
+  ws.onerror = () => { addLog('error', 'WS', 'Error de conexión'); setOverlayError('No se pudo conectar al servidor WebSocket'); };
+  ws.onclose = () => { setWsStatus('disconnected'); addLog('warn', 'WS', 'Conexión cerrada'); showOverlay(); };
+}
+
+function disconnect() {
+  if (ws) { ws.onclose = null; ws.close(); ws = null; }
+  setWsStatus('disconnected'); showOverlay();
+}
+
+/* ── MESSAGE HANDLER ────────────────────────────────────────── */
+function handleMessage(msg) {
+  if (msg.type === 'welcome') {
+    addLog('info', 'SRV', `Bienvenido. ID: ${msg.id} | Rol: ${msg.role}`);
+    if (msg.lastSnapshot) processSnapshot(msg.lastSnapshot);
+    return;
+  }
+  if (msg.type === 'snapshot') {
+    processSnapshot(msg.payload);
+    snapshotCount++;
+    flashEl('h-snapshots');
+    setText('h-snapshots', snapshotCount);
+    setText('h-last', new Date().toLocaleTimeString());
+    addLog('info', 'SNAP', `#${msg.seqNumber} recv — t=${msg.payload?.meta?.gameTime?.toFixed(1)}s`);
+    return;
+  }
+}
+
+/* ── PROCESS SNAPSHOT ───────────────────────────────────────── */
+function processSnapshot(d) {
+  if (!d) return;
+  lastSnapshot = d;
+
+  // ── Ore Container ──────────────────────────────────────────
+  const ore = d.oreContainer || {};
+  setText('ore-count',   ore.oreCount ?? '—');
+  setText('ore-cap',     ore.effectiveCapacity ?? '—');
+  setText('ore-dropped', ore.totalDropped ?? '—');
+  const fillPct = Math.round((ore.fillRatio ?? 0) * 100);
+  setText('ore-fill-pct', fillPct + '%');
+  setBarWidth('ore-fill-bar', fillPct, fillPct > 80 ? 'red' : fillPct > 60 ? 'yellow' : 'green');
+  const policy = ore.policy || '—';
+  const policyEl = document.getElementById('ore-policy-badge');
+  policyEl.textContent = policy;
+  policyEl.className = 'panel-badge ' + (policy === 'BoundedBuffer' ? 'warn' : policy === 'Unbounded' ? 'ok' : 'alert');
+
+  // ── Ore Retry Metrics (NEW) ────────────────────────────────
+  const rm = d.oreRetryMetrics || {};
+  const tracked  = rm.trackedOresCount ?? 0;
+  const expired  = rm.totalOreExpired ?? 0;
+  const idleThresh = rm.oreIdleThresholdSeconds ?? 0;
+  const maxRet   = rm.oreMaxRetries ?? 0;
+  const pending  = rm.pendingOres || [];
+
+  setText('retry-tracked',     tracked);
+  setText('retry-expired',     expired);
+  setText('retry-idle-thresh', idleThresh.toFixed(1) + 's');
+  setText('retry-max',         maxRet);
+
+  // expiration rate vs total tracked (lifetime approximation)
+  const expPct = tracked + expired > 0 ? Math.round((expired / (tracked + expired)) * 100) : 0;
+  setText('retry-exp-pct', expPct + '%');
+  setBarWidth('retry-exp-bar', expPct, expPct > 40 ? 'red' : expPct > 15 ? 'yellow' : 'green');
+
+  // pending count badge
+  const pendBadge = document.getElementById('pending-count-badge');
+  pendBadge.textContent = pending.length;
+  pendBadge.className = 'panel-badge ' + (pending.length > 5 ? 'alert' : pending.length > 0 ? 'warn' : 'ok');
+
+  // retry panel badge
+  const retryBadge = document.getElementById('retry-badge');
+  retryBadge.textContent = `${pending.length} pending · ${expired} exp`;
+  retryBadge.className = 'panel-badge ' + (expired > 10 ? 'alert' : expired > 0 ? 'warn' : 'ok');
+
+  // log new ore expirations
+  if (lastSnapshot && (lastSnapshot.oreRetryMetrics?.totalOreExpired ?? 0) < expired) {
+    addLog('warn', 'RETRY', `Ore expirado! Total: ${expired}`);
+  }
+
+  renderPendingOres(pending, maxRet, idleThresh);
+
+  // ── Latency ────────────────────────────────────────────────
+  const lat = d.latencyMetrics || {};
+  const avgMs = lat.avgLatencyMs ?? 0;
+  const p50   = lat.p50Ms ?? 0;
+  const p98   = lat.p98Ms ?? 0;
+  const p99   = lat.p99Ms ?? 0;
+  const tp    = lat.throughputPerSec ?? 0;
+  const margin= lat.safetyMargin ?? 1;
+
+  setText('lat-avg',        fmtMs(avgMs));
+  setText('lat-p50',        fmtMs(p50));
+  setText('lat-p98',        fmtMs(p98));
+  setText('lat-p99',        fmtMs(p99));
+  setText('lat-throughput', tp.toFixed(2) + '/s');
+
+  const marginPct = Math.round(margin * 100);
+  setText('margin-pct', marginPct + '%');
+  setBarWidth('margin-bar', marginPct, marginPct < 20 ? 'red' : marginPct < 50 ? 'yellow' : 'green');
+
+  const sysEl = document.getElementById('sys-status-badge');
+  if (marginPct < 10) { sysEl.textContent = 'COLAPSO'; sysEl.className = 'panel-badge alert'; }
+  else if (marginPct < 30) { sysEl.textContent = 'PRESIÓN'; sysEl.className = 'panel-badge warn'; }
+  else { sysEl.textContent = 'ESTABLE'; sysEl.className = 'panel-badge ok'; }
+
+  updateThroughputBars(tp);
+
+  const now = d.meta?.gameTime ?? Date.now()/1000;
+  latencyHistory.avg.push(avgMs); latencyHistory.p50.push(p50);
+  latencyHistory.p98.push(p98);   latencyHistory.p99.push(p99);
+  latencyHistory.ts.push(now);
+  if (latencyHistory.avg.length > MAX_CHART_PTS) {
+    ['avg','p50','p98','p99','ts'].forEach(k => latencyHistory[k].shift());
+  }
+  drawChart();
+  setText('chart-points', latencyHistory.avg.length + ' pts');
+
+  // ── Armoury ────────────────────────────────────────────────
+  const arm = d.armouryController || {};
+  setText('arm-wait',    (arm.batchMaxWaitMs ?? '—') + ' ms');
+  setText('arm-batch',   arm.batchMaxSize ?? '—');
+  setText('arm-size',    (arm.minWeaponSize ?? '—') + ' (puñal=1.0)');
+  setText('arm-fail',    Math.round((arm.saveFailProb ?? 0) * 100) + '%');
+  setText('arm-econn',   Math.round((arm.econnresetRatio ?? 0) * 100) + '%');
+  setText('arm-retries', arm.maxAutoRetries ?? '—');
+  const armBadgeEl = document.getElementById('armoury-badge');
+  const failPct = Math.round((arm.saveFailProb ?? 0) * 100);
+  armBadgeEl.textContent = 'FAIL ' + failPct + '%';
+  armBadgeEl.className = 'panel-badge ' + (failPct > 30 ? 'alert' : failPct > 10 ? 'warn' : 'ok');
+
+  // ── Workers ────────────────────────────────────────────────
+  const pool = d.blacksmithPool || {};
+  const workers = d.workers || [];
+  setText('h-workers', (pool.activeCount ?? 0) + '/' + (pool.totalInPool ?? 0));
+  setText('pool-badge', (pool.activeCount ?? 0) + ' / ' + (pool.totalInPool ?? 0));
+  renderWorkers(workers);
+
+  // ── Jitter ─────────────────────────────────────────────────
+  const j = d.jitterConfig || {};
+  setText('j-base',     (j.baseRetryMs ?? '—') + ' ms');
+  setText('j-max',      (j.jitterMaxMs ?? '—') + ' ms');
+  setText('j-retrymax', (j.maxRetryMs  ?? '—') + ' ms');
+  const cpPct = Math.round((j.currentCraftProbability ?? 1) * 100);
+  setText('j-craftprob', cpPct + '%');
+  setText('j-ratio-pct', cpPct + '%');
+  setBarWidth('j-ratio-bar', cpPct, cpPct < 50 ? 'red' : cpPct < 80 ? 'yellow' : 'green');
+  const cpBadge = document.getElementById('craft-prob-badge');
+  cpBadge.textContent = 'PROB ' + cpPct + '%';
+  cpBadge.className = 'panel-badge ' + (cpPct < 50 ? 'alert' : cpPct < 80 ? 'warn' : 'ok');
+
+  // ── Telemetry Errors ───────────────────────────────────────
+  const err = d.telemetryErrors || {};
+  const maxErr = Math.max(1, err.armoury||0, err.worker||0, err.observer||0, err.container||0);
+  setText('err-armoury',   err.armoury   ?? 0);
+  setText('err-worker',    err.worker    ?? 0);
+  setText('err-observer',  err.observer  ?? 0);
+  setText('err-container', err.container ?? 0);
+  setBarWidth('err-armoury-bar',   Math.round(((err.armoury||0)/maxErr)*100));
+  setBarWidth('err-worker-bar',    Math.round(((err.worker||0)/maxErr)*100));
+  setBarWidth('err-observer-bar',  Math.round(((err.observer||0)/maxErr)*100));
+  setBarWidth('err-container-bar', Math.round(((err.container||0)/maxErr)*100));
+  const totalErr = (err.armoury||0)+(err.worker||0)+(err.observer||0)+(err.container||0);
+  setText('errors-total', totalErr);
+  const errBadge = document.getElementById('errors-total');
+  errBadge.className = 'panel-badge ' + (totalErr > 10 ? 'alert' : totalErr > 0 ? 'warn' : 'ok');
+
+  // ── Evaluation ─────────────────────────────────────────────
+  const ev = d.evaluation || {};
+  setScore('score-junior', ev.junior?.score ?? 0);
+  setScore('score-middle', ev.middle?.score ?? 0);
+  setScore('score-senior', ev.senior?.score ?? 0);
+  renderEvalDetail(ev);
+}
+
+/* ── RENDER PENDING ORES (NEW) ─────────────────────────────── */
+function renderPendingOres(pending, maxRetries, idleThresh) {
+  const el = document.getElementById('pending-ores-list');
+  if (!pending || pending.length === 0) {
+    el.innerHTML = '<div class="no-pending">Ningún ore pendiente</div>';
+    return;
+  }
+
+  el.innerHTML = pending.map(ore => {
+    const att = ore.attempts ?? 0;
+    const idle = ore.idleSeconds ?? 0;
+    const idlePct = Math.min(100, Math.round((idle / idleThresh) * 100));
+    const attemptClass = att >= 3 ? 'attempt-3plus' : att === 2 ? 'attempt-2' : 'attempt-1';
+    const fillColor = att >= 3 ? 'var(--red)' : att === 2 ? 'var(--orange)' : 'var(--yellow)';
+    const idleColor = idlePct > 80 ? 'var(--red)' : idlePct > 50 ? 'var(--orange)' : 'var(--cyan)';
+
+    // dot indicators for attempts
+    const dots = Array.from({length: Math.max(maxRetries, 3)}, (_, i) => {
+      const cls = i < att ? (att === 1 ? 'filled-1' : att === 2 ? 'filled-2' : 'filled-3') : '';
+      return `<div class="pick-fail-dot ${cls}"></div>`;
+    }).join('');
+
+    return `<div class="pending-ore-row ${attemptClass}">
+      <span class="ore-id">#${ore.oreId}</span>
+      <span class="ore-att">${dots.replace(/class="pick-fail-dot/g, 'style="display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--border2);margin-right:2px" class="pick-fail-dot').replace(/\n/g,' ')}<br/><span style="font-size:8px;color:var(--text3)">${att}/${maxRetries} att</span></span>
+      <div>
+        <div class="ore-progress-mini" style="margin-bottom:2px">
+          <div class="ore-progress-fill" style="width:${idlePct}%;background:${idleColor}"></div>
+        </div>
+        <span style="font-size:8px;color:var(--text3)">${idle.toFixed(1)}s idle</span>
+      </div>
+      <span style="font-size:8px;color:${fillColor};font-family:var(--mono)">${idlePct}%<br/><span style="color:var(--text3)">thresh</span></span>
+    </div>`;
+  }).join('');
+}
+
+/* ── RENDER WORKERS (EXTENDED) ─────────────────────────────── */
+function renderWorkers(workers) {
+  const grid = document.getElementById('workers-grid');
+  if (!workers || workers.length === 0) {
+    grid.innerHTML = '<div class="empty-state"><div class="icon">⚙</div><span>Sin workers</span></div>';
+    return;
+  }
+
+  grid.innerHTML = workers.map(w => {
+    const st       = (w.state || '').toLowerCase();
+    const inactive = !w.isActive;
+    const fails    = w.consecutivePickFails ?? 0;
+
+    const cardCls = inactive ? 'worker-card inactive' :
+      st === 'stunned'  ? 'worker-card stunned'  :
+      st === 'draining' ? 'worker-card draining' :
+      (st === 'resting' || st === 'gotorrest' || st === 'idle') ? 'worker-card resting' :
+      'worker-card active';
+
+    const stateCls = st === 'stunned'  ? 'worker-state stunned'  :
+                     st === 'draining' ? 'worker-state draining' :
+                     st === 'idle'     ? 'worker-state idle'     :
+                     st === 'resting'  ? 'worker-state resting'  : 'worker-state';
+
+    // consecutivePickFails dots (max 5 shown)
+    const maxDots  = 5;
+    const dotCount = Math.min(fails, maxDots);
+    const dotClass = fails >= 3 ? 'filled-3' : fails === 2 ? 'filled-2' : fails === 1 ? 'filled-1' : '';
+    const dots     = Array.from({length: maxDots}, (_, i) =>
+      `<div class="pick-fail-dot ${i < dotCount ? dotClass : ''}"></div>`
+    ).join('');
+
+    const failCountCls = fails >= 3 ? 'danger' : fails >= 1 ? 'warn' : 'ok';
+
+    return `<div class="${cardCls}">
+      <div class="worker-id">${w.id || '—'}</div>
+      <div class="${stateCls}">${w.state || '—'}</div>
+      <div class="worker-tasks">✓ ${w.tasksCompleted ?? 0} tareas${w.isDraining ? ' · DRAIN' : ''}</div>
+      <div class="worker-pick-fails">
+        <span class="pick-fail-label">Pick Fails</span>
+        <div class="pick-fail-dots">${dots}</div>
+        <span class="pick-fail-count ${failCountCls}">${fails}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ── RENDER EVAL DETAIL ─────────────────────────────────────── */
+function renderEvalDetail(ev) {
+  const el = document.getElementById('eval-detail');
+  const tiers = [
+    { key: 'junior', label: 'Junior', cls: 'junior', color: 'var(--green)' },
+    { key: 'middle', label: 'Middle', cls: 'middle', color: 'var(--yellow)' },
+    { key: 'senior', label: 'Senior', cls: 'senior', color: 'var(--red)' },
+  ];
+  el.innerHTML = tiers.map(t => {
+    const data    = ev[t.key] || {};
+    const metrics = Object.entries(data).filter(([k]) => k !== 'score');
+    const score   = data.score ?? 0;
+    const bars    = metrics.map(([k, v]) => `
+      <div class="eval-metric">
+        <div class="eval-bar-row">
+          <span class="eval-bar-label">${k}</span>
+          <div class="eval-bar-track">
+            <div class="eval-bar-fill" style="width:${Math.round(v*100)}%;background:${t.color}"></div>
+          </div>
+          <span class="eval-bar-val">${(v * 100).toFixed(0)}%</span>
+        </div>
+      </div>`).join('');
+    return `<div class="eval-section">
+      <div class="eval-tier ${t.cls}">
+        <div class="tier-dot"></div>
+        <span>${t.label.toUpperCase()}</span>
+        <span class="tier-score">${(score * 100).toFixed(0)}%</span>
+      </div>${bars}
+    </div>`;
+  }).join('');
+}
+
+/* ── LATENCY CHART ──────────────────────────────────────────── */
+function drawChart() {
+  const canvas = document.getElementById('latency-canvas');
+  const wrap   = document.getElementById('latency-chart-wrap');
+  const W = wrap.offsetWidth - 28;
+  const H = wrap.offsetHeight - 40;
+  if (W <= 0 || H <= 0) return;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+  const data = latencyHistory;
+  if (data.avg.length < 2) return;
+  const allVals = [...data.avg, ...data.p50, ...data.p98, ...data.p99].filter(v => v > 0);
+  if (!allVals.length) return;
+  const maxV = Math.max(...allVals) * 1.1;
+  const px   = i => (i / (data.avg.length - 1)) * W;
+  const py   = v => H - ((v / maxV)) * H;
+
+  ctx.strokeStyle = 'rgba(30,45,53,0.8)'; ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = (i / 4) * H;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    ctx.fillStyle = 'rgba(58,85,96,0.8)'; ctx.font = '9px "Share Tech Mono"';
+    ctx.fillText(fmtMs(maxV - (i / 4) * maxV), 2, y - 2);
+  }
+
+  const series = [
+    { key:'p99', color:'rgba(240,64,64,0.7)',   lw:1 },
+    { key:'p98', color:'rgba(240,192,64,0.7)',  lw:1 },
+    { key:'p50', color:'rgba(122,154,170,0.7)', lw:1 },
+    { key:'avg', color:'rgba(64,216,208,0.9)',  lw:2 },
+  ];
+  series.forEach(s => {
+    ctx.beginPath(); ctx.strokeStyle = s.color; ctx.lineWidth = s.lw;
+    data[s.key].forEach((v, i) => i === 0 ? ctx.moveTo(px(i), py(v)) : ctx.lineTo(px(i), py(v)));
+    ctx.stroke();
+  });
+
+  ctx.beginPath(); ctx.moveTo(px(0), py(data.avg[0]));
+  data.avg.forEach((v, i) => ctx.lineTo(px(i), py(v)));
+  ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath();
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, 'rgba(64,216,208,0.12)'); grad.addColorStop(1, 'rgba(64,216,208,0)');
+  ctx.fillStyle = grad; ctx.fill();
+}
+
+/* ── THROUGHPUT BARS ────────────────────────────────────────── */
+function updateThroughputBars(tp) {
+  throughputHistory.push(tp); throughputHistory.shift();
+  const maxTp = Math.max(0.001, ...throughputHistory);
+  document.getElementById('tp-bars').innerHTML = throughputHistory.map(v => {
+    const h = Math.max(2, Math.round((v / maxTp) * 18));
+    const color = v/maxTp > 0.8 ? 'var(--red)' : v/maxTp > 0.5 ? 'var(--yellow)' : 'var(--blue)';
+    return `<div class="tp-bar" style="height:${h}px;background:${color}"></div>`;
+  }).join('');
+}
+
+/* ── LOG ────────────────────────────────────────────────────── */
+const MAX_LOGS = 80;
+const logFeed  = document.getElementById('log-feed');
+let logCount   = 0;
+
+function addLog(type, cat, msg) {
+  if (logCount === 0) logFeed.innerHTML = '';
+  logCount++;
+  if (logCount > MAX_LOGS) logFeed.removeChild(logFeed.lastChild);
+  const ts = new Date().toLocaleTimeString('es', { hour12: false });
+  const entry = document.createElement('div');
+  entry.className = `log-entry ${type}`;
+  entry.innerHTML = `<span class="log-ts">${ts}</span><span class="log-cat">${cat}</span><span class="log-msg">${msg}</span>`;
+  logFeed.insertBefore(entry, logFeed.firstChild);
+}
+
+/* ── WS STATUS UI ───────────────────────────────────────────── */
+function setWsStatus(status) {
+  document.getElementById('ws-dot').className = 'ws-dot ' + status;
+  document.getElementById('ws-label').textContent =
+    status === 'connected' ? 'Conectado' : status === 'connecting' ? 'Conectando...' : 'Desconectado';
+}
+
+/* ── OVERLAY ────────────────────────────────────────────────── */
+function showOverlay()          { document.getElementById('overlay').classList.remove('hidden'); setOverlayConnecting(false); }
+function hideOverlay()          { document.getElementById('overlay').classList.add('hidden'); }
+function setOverlayConnecting(v){ document.getElementById('connecting-anim').style.display = v ? 'flex':'none'; document.getElementById('btn-connect-overlay').style.display = v ? 'none':'inline-block'; }
+function setOverlayError(msg)   { document.getElementById('overlay-error').textContent = msg; setOverlayConnecting(false); }
+
+/* ── HELPERS ────────────────────────────────────────────────── */
+function setText(id, val)     { const el = document.getElementById(id); if (el) el.textContent = val; }
+function flashEl(id)          { const el = document.getElementById(id); if (!el) return; el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 400); }
+function setBarWidth(id, pct, colorCls) {
+  const el = document.getElementById(id); if (!el) return;
+  el.style.width = Math.min(100, Math.max(0, pct)) + '%';
+  if (colorCls) el.className = 'bar-fill ' + colorCls;
+}
+function setScore(id, score)  { const el = document.getElementById(id); if (!el) return; el.textContent = (score * 100).toFixed(0) + '%'; }
+function fmtMs(ms)            { if (!ms || ms < 0.01) return '0ms'; if (ms < 1000) return ms.toFixed(0) + 'ms'; return (ms/1000).toFixed(1) + 's'; }
+
+/* ── EVENTS ─────────────────────────────────────────────────── */
+document.getElementById('btn-connect-overlay').addEventListener('click', () => {
+  const base = document.getElementById('url-input').value.trim().replace(/\/dashboard$/, '').replace(/\/$/, '');
+  const code = document.getElementById('code-input').value.trim().toUpperCase();
+  if (!code) { document.getElementById('overlay-error').textContent = 'Introduce el código de sala que te dio el juego.'; return; }
+  const wsUrl = `${base}/dashboard?code=${code}`;
+  document.getElementById('header-url').value  = base;
+  document.getElementById('header-code').value = code;
+  document.getElementById('overlay-error').textContent = '';
+  connect(wsUrl);
+});
+document.getElementById('url-input').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('btn-connect-overlay').click(); });
+document.getElementById('code-input').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('btn-connect-overlay').click(); });
+document.getElementById('btn-reconnect').addEventListener('click', () => {
+  const base = document.getElementById('header-url').value.trim().replace(/\/dashboard.*$/, '').replace(/\/$/, '');
+  const code = document.getElementById('header-code').value.trim().toUpperCase();
+  const wsUrl = `${base}/dashboard?code=${code}`;
+  document.getElementById('url-input').value  = base;
+  document.getElementById('code-input').value = code;
+  connect(wsUrl);
+});
+document.getElementById('btn-disconnect').addEventListener('click', disconnect);
+document.getElementById('btn-clear-log').addEventListener('click', () => { logCount = 0; logFeed.innerHTML = '<div class="empty-state"><div class="icon">📡</div><span>Log limpiado</span></div>'; });
+
+window.addEventListener('resize', drawChart);
+updateThroughputBars(0);
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "name": "telemetry-demo",
+  "version": "1.0.0",
+  "description": "Telemetry WebSocket server + dashboard",
+  "main": "telemetry-server.js",
+  "scripts": {
+    "start": "node telemetry-server.js"
+  },
+  "dependencies": {
+    "ws": "^8.0.0"
+  }
+}

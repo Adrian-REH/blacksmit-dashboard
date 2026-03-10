@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blacksmith — Reclutamiento Técnico Inteligente</title>
+    <style>
+        /* ══════════════════════════════════════════════════════════════
+           RESET & BASE
+           ══════════════════════════════════════════════════════════════ */
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-dark:      #0a0e17;
+            --bg-card:      #111827;
+            --bg-card-alt:  #1a2236;
+            --accent-cyan:  #00e5ff;
+            --accent-green: #39ff14;
+            --accent-orange:#ff9800;
+            --accent-red:   #ff3d3d;
+            --accent-purple:#b44dff;
+            --accent-gold:  #ffd700;
+            --text-primary: #e0e6f0;
+            --text-muted:   #7a8ba7;
+            --border:       #1e2a40;
+            --glow-cyan:    0 0 20px rgba(0,229,255,.25);
+            --glow-green:   0 0 20px rgba(57,255,20,.25);
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* ══════════════════════════════════════════════════════════════
+           NAVBAR
+           ══════════════════════════════════════════════════════════════ */
+        .navbar {
+            position: fixed; top: 0; left: 0; width: 100%; z-index: 100;
+            background: rgba(10,14,23,.92);
+            backdrop-filter: blur(12px)
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+            display: flex; align-items: center; justify-content: space-between;
+            height: 64px;
+        }
+
+        .navbar-brand {
+            font-size: 1.1rem; font-weight: 700; letter-spacing: 2px;
+            color: var(--accent-cyan);
+            text-transform: uppercase;
+        }
+        .navbar-brand span { color: var(--text-muted); font-weight: 400; }
+
+        .navbar-links { display: flex; gap: 2rem; list-style: none; }
+        .navbar-links a {
+            color: var(--text-muted); text-decoration: none; font-size: .85rem;
+            letter-spacing: 1px; text-transform: uppercase; transition: color .3s;
+        }
+        .navbar-links a:hover { color: var(--accent-cyan); }
+
+        .navbar-cta {
+            padding: .55rem 1.4rem; border: 1px solid var(--accent-cyan);
+            background: transparent; color: var(--accent-cyan); border-radius: 6px;
+            font-size: .85rem; cursor: pointer; letter-spacing: 1px;
+            transition: all .3s;
+        }
+        .navbar-cta:hover {
+            background: var(--accent-cyan); color: var(--bg-dark);
+            box-shadow: var(--glow-cyan);
+        }
+
+        /* ══════════════════════════════════════════════════════════════
+           HERO
+           ══════════════════════════════════════════════════════════════ */
+        .hero {
+            min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            text-align: center; padding: 6rem 2rem 4rem;
+            
+            position: relative;
+        }
+
+/* En móviles: reemplazar video por imagen estática para ahorrar datos */
+@media (max-width: 768px) {
+    .hero-video {
+        display: none;
+    }
+
+    .hero {
+        background-image: url('./game-screenshot.png');
+        background-size: cover;
+        background-position: center;
+    }
+}
+
+/* Usuarios que prefieren menos movimiento */
+@media (prefers-reduced-motion: reduce) {
+    .hero-video {
+        display: none;
+    }
+
+    .hero {
+        background-image: url('./game-screenshot.png');
+        background-size: cover;
+        background-position: center;
+    }
+}
+
+/* Overlay oscuro con gradiente */
+.hero-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        135deg,
+        rgba(0, 0, 0, 0.85) 0%,
+        rgba(0, 0, 0, 0.7) 70%,
+        rgba(0, 0, 0, 0.4) 100%
+    );
+    z-index: 1;
+}
+
+/* Video ocupa todo el fondo */
+.hero-video {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    min-width: 100%;
+    min-height: 100%;
+    width: auto;
+    height: auto;
+    transform: translate(-50%, -50%);
+    object-fit: cover;
+    z-index: 0;
+}
+        .hero-content {
+        position: relative;
+        z-index: 2;
+        max-width: 860px; }
+
+        .hero-badge {
+            display: inline-block; padding: .35rem 1rem; border-radius: 50px;
+            background: rgba(0,229,255,.1); border: 1px solid rgba(0,229,255,.3);
+            color: var(--accent-cyan); font-size: .75rem; letter-spacing: 2px;
+            text-transform: uppercase; margin-bottom: 1.5rem;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.2rem, 5vw, 3.8rem); font-weight: 800;
+            line-height: 1.15; margin-bottom: 1.5rem;
+        }
+        .hero h1 .gradient {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 1.15rem; color: var(--text-muted); max-width: 640px;
+            margin: 0 auto 2.5rem;
+        }
+
+        .hero-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+
+        .btn-primary {
+            padding: .75rem 2rem; border-radius: 8px; border: none;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            color: #fff; font-size: 1rem; font-weight: 600; cursor: pointer;
+            transition: transform .2s, box-shadow .3s;
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: var(--glow-cyan); }
+
+        .btn-secondary {
+            padding: .75rem 2rem; border-radius: 8px;
+            border: 1px solid var(--border); background: transparent;
+            color: var(--text-primary); font-size: 1rem; cursor: pointer;
+            transition: border-color .3s, color .3s;
+        }
+        .btn-secondary:hover { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+
+        /* ══════════════════════════════════════════════════════════════
+           SECTIONS COMMON
+           ══════════════════════════════════════════════════════════════ */
+        section { padding: 5rem 2rem; }
+
+        .section-label {
+            display: inline-block; padding: .3rem .9rem; border-radius: 50px;
+            font-size: .7rem; letter-spacing: 2px; text-transform: uppercase;
+            margin-bottom: .75rem;
+        }
+
+        .section-title {
+            font-size: clamp(1.6rem, 3.5vw, 2.4rem); font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .section-subtitle {
+            color: var(--text-muted); max-width: 600px; margin-bottom: 3rem;
+        }
+
+        .centered { text-align: center; }
+        .centered .section-subtitle { margin-left: auto; margin-right: auto; }
+
+        /* ══════════════════════════════════════════════════════════════
+           PROBLEMA
+           ══════════════════════════════════════════════════════════════ */
+        #problema { background: var(--bg-card); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+
+        .problem-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 2rem; max-width: 1100px; margin: 0 auto;
+        }
+
+        .problem-card {
+            background: var(--bg-dark); border: 1px solid var(--border);
+            border-radius: 12px; padding: 2rem; position: relative; overflow: hidden;
+        }
+        .problem-card::before {
+            content: ''; position: absolute; top: 0; left: 0;
+            width: 100%; height: 3px;
+        }
+        .problem-card:nth-child(1)::before { background: var(--accent-red); }
+        .problem-card:nth-child(2)::before { background: var(--accent-orange); }
+        .problem-card:nth-child(3)::before { background: var(--accent-orange); }
+
+        .problem-icon { font-size: 2rem; margin-bottom: 1rem; }
+
+        .problem-card h3 { font-size: 1.1rem; margin-bottom: .5rem; }
+        .problem-card p  { color: var(--text-muted); font-size: .9rem; }
+
+        .problem-stat {
+            display: inline-block; margin-top: 1rem; padding: .3rem .8rem;
+            border-radius: 6px; font-size: .85rem; font-weight: 700;
+        }
+        .stat-red    { background: rgba(255,61,61,.15); color: var(--accent-red); }
+        .stat-orange { background: rgba(255,152,0,.15); color: var(--accent-orange); }
+
+        /* ══════════════════════════════════════════════════════════════
+           SOLUCIÓN (3 ALGORITMOS)
+           ══════════════════════════════════════════════════════════════ */
+        .algo-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem; max-width: 1100px; margin: 0 auto;
+        }
+
+        .algo-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 14px; padding: 2.5rem 2rem; position: relative;
+            transition: border-color .3s, transform .3s;
+        }
+        .algo-card:hover { border-color: var(--accent-cyan); transform: translateY(-4px); }
+
+        .algo-number {
+            position: absolute; top: 1.2rem; right: 1.5rem;
+            font-size: 3rem; font-weight: 900; color: rgba(0,229,255,.08);
+            line-height: 1;
+        }
+
+        .algo-icon {
+            width: 48px; height: 48px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.4rem; margin-bottom: 1.2rem;
+        }
+        .algo-icon.eval   { background: rgba(57,255,20,.12); }
+        .algo-icon.engine { background: rgba(0,229,255,.12); }
+        .algo-icon.tele   { background: rgba(180,77,255,.12); }
+
+        .algo-card h3 { font-size: 1.15rem; margin-bottom: .6rem; }
+        .algo-card p  { color: var(--text-muted); font-size: .9rem; line-height: 1.7; }
+
+        .algo-tags { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: 1.2rem; }
+        .algo-tag {
+            padding: .2rem .65rem; border-radius: 50px; font-size: .7rem;
+            letter-spacing: 1px; text-transform: uppercase;
+        }
+        .tag-green  { background: rgba(57,255,20,.1);  color: var(--accent-green); }
+        .tag-cyan   { background: rgba(0,229,255,.1);  color: var(--accent-cyan); }
+        .tag-purple { background: rgba(180,77,255,.1); color: var(--accent-purple); }
+        .tag-gold   { background: rgba(255,215,0,.1);  color: var(--accent-gold); }
+
+        /* ══════════════════════════════════════════════════════════════
+           FLUJO / PROCESO
+           ══════════════════════════════════════════════════════════════ */
+        #proceso { background: var(--bg-card); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+
+        .flow {
+            display: flex; align-items: flex-start; justify-content: center;
+            gap: 0; max-width: 1100px; margin: 0 auto; flex-wrap: wrap;
+        }
+
+        .flow-step {
+            flex: 1; min-width: 180px; max-width: 220px;
+            text-align: center; padding: 1.5rem 1rem; position: relative;
+        }
+
+        .flow-step-number {
+            width: 44px; height: 44px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 1rem; margin: 0 auto .8rem;
+            border: 2px solid var(--accent-cyan); color: var(--accent-cyan);
+            background: rgba(0,229,255,.06);
+        }
+
+        .flow-step h4 { font-size: .95rem; margin-bottom: .4rem; }
+        .flow-step p  { font-size: .8rem; color: var(--text-muted); }
+
+        .flow-arrow {
+            display: flex; align-items: center; padding-top: 1.8rem;
+            color: var(--accent-cyan); font-size: 1.4rem; opacity: .5;
+        }
+
+        /* ══════════════════════════════════════════════════════════════
+           DASHBOARD PREVIEW
+           ══════════════════════════════════════════════════════════════ */
+        .dashboard-preview {
+            max-width: 1100px; margin: 3rem auto 0; border-radius: 14px;
+            overflow: hidden; border: 1px solid var(--border);
+            box-shadow: 0 20px 60px rgba(0,0,0,.4);
+            position: relative;
+        }
+        .dashboard-preview img { width: 100%; display: block; }
+        .dashboard-preview .overlay {
+            position: absolute; inset: 0;
+            background: linear-gradient(180deg, transparent 60%, var(--bg-card) 100%);
+            pointer-events: none;
+        }
+
+        /* ══════════════════════════════════════════════════════════════
+           IMPACTO / MÉTRICAS
+           ══════════════════════════════════════════════════════════════ */
+        .impact-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 2rem; max-width: 1100px; margin: 0 auto;
+        }
+
+        .impact-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 14px; padding: 2.5rem 2rem; text-align: center;
+            transition: border-color .3s;
+        }
+        .impact-card:hover { border-color: var(--accent-green); }
+
+        .impact-before {
+            font-size: .85rem; color: var(--accent-red); margin-bottom: .3rem;
+            text-decoration: line-through; opacity: .7;
+        }
+
+        .impact-arrow-down { font-size: 1.4rem; margin-bottom: .3rem; }
+
+        .impact-after {
+            font-size: 2.2rem; font-weight: 800;
+            background: linear-gradient(135deg, var(--accent-green), var(--accent-cyan));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            margin-bottom: .5rem;
+        }
+
+        .impact-label { color: var(--text-muted); font-size: .9rem; }
+
+        /* ══════════════════════════════════════════════════════════════
+           TRANSPARENCIA
+           ══════════════════════════════════════════════════════════════ */
+        #transparencia {
+            background: var(--bg-dark);
+            position: relative;
+            overflow: hidden;
+        }
+        #transparencia::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background:
+                radial-gradient(ellipse at 20% 50%, rgba(255,215,0,.04) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 50%, rgba(0,229,255,.04) 0%, transparent 60%);
+            pointer-events: none;
+        }
+
+        .transparency-wrapper {
+            max-width: 1100px; margin: 0 auto;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 4rem;
+            align-items: center; position: relative;
+        }
+
+        .transparency-content { position: relative; }
+
+        .transparency-content h2 {
+            font-size: clamp(1.6rem, 3.5vw, 2.2rem); font-weight: 700;
+            margin-bottom: 1.2rem;
+        }
+        .transparency-content h2 .highlight-gold {
+            color: var(--accent-gold);
+        }
+
+        .transparency-content > p {
+            color: var(--text-muted); font-size: 1rem; line-height: 1.8;
+            margin-bottom: 2rem;
+        }
+
+        .transparency-features { list-style: none; display: flex; flex-direction: column; gap: 1.2rem; }
+
+        .transparency-features li {
+            display: flex; align-items: flex-start; gap: 1rem;
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 1.2rem 1.5rem;
+            transition: border-color .3s;
+        }
+        .transparency-features li:hover { border-color: var(--accent-gold); }
+
+        .transparency-features .feat-icon {
+            flex-shrink: 0; width: 40px; height: 40px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; background: rgba(255,215,0,.1);
+        }
+
+        .transparency-features .feat-text h4 {
+            font-size: .95rem; margin-bottom: .25rem; color: var(--text-primary);
+        }
+        .transparency-features .feat-text p {
+            font-size: .83rem; color: var(--text-muted); line-height: 1.6;
+        }
+
+        /* Panel visual de transparencia */
+        .transparency-visual {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 14px; padding: 2rem; position: relative;
+        }
+
+        .tv-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 1.5rem; padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .tv-header h4 { font-size: .9rem; letter-spacing: 1px; text-transform: uppercase; }
+        .tv-badge {
+            padding: .25rem .7rem; border-radius: 50px; font-size: .7rem;
+            font-weight: 700; letter-spacing: 1px;
+        }
+        .badge-rejected { background: rgba(255,61,61,.15); color: var(--accent-red); }
+        .badge-approved { background: rgba(57,255,20,.15); color: var(--accent-green); }
+
+        .tv-candidate {
+            display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;
+        }
+        .tv-avatar {
+            width: 44px; height: 44px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 1rem;
+        }
+        .tv-name { font-weight: 600; font-size: .95rem; }
+        .tv-role { font-size: .8rem; color: var(--text-muted); }
+
+        .tv-breakdown { display: flex; flex-direction: column; gap: .8rem; }
+
+        .tv-skill {
+            display: flex; align-items: center; gap: .8rem;
+        }
+        .tv-skill-label {
+            width: 130px; font-size: .8rem; color: var(--text-muted);
+            text-align: right; flex-shrink: 0;
+        }
+        .tv-bar-bg {
+            flex: 1; height: 8px; border-radius: 4px;
+            background: rgba(255,255,255,.06); overflow: hidden;
+        }
+        .tv-bar {
+            height: 100%; border-radius: 4px;
+            transition: width 1.5s ease-out;
+        }
+        .tv-bar.high   { background: var(--accent-green); }
+        .tv-bar.mid    { background: var(--accent-orange); }
+        .tv-bar.low    { background: var(--accent-red); }
+        .tv-bar.good   { background: var(--accent-cyan); }
+
+        .tv-percent {
+            width: 40px; font-size: .8rem; font-weight: 700; text-align: right;
+        }
+        .tv-percent.high { color: var(--accent-green); }
+        .tv-percent.mid  { color: var(--accent-orange); }
+        .tv-percent.low  { color: var(--accent-red); }
+        .tv-percent.good { color: var(--accent-cyan); }
+
+        .tv-verdict {
+            margin-top: 1.5rem; padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+        .tv-verdict p {
+            font-size: .85rem; color: var(--text-muted); line-height: 1.7;
+        }
+        .tv-verdict strong { color: var(--accent-red); }
+        .tv-verdict em { color: var(--accent-gold); font-style: normal; }
+
+        /* ══════════════════════════════════════════════════════════════
+           EXPERIENCIA CANDIDATO
+           ══════════════════════════════════════════════════════════════ */
+        #experiencia { background: var(--bg-card); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+
+        .exp-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem; max-width: 900px; margin: 0 auto;
+        }
+
+        .exp-card {
+            background: var(--bg-dark); border: 1px solid var(--border);
+            border-radius: 12px; padding: 2rem; text-align: center;
+            transition: border-color .3s;
+        }
+        .exp-card:hover { border-color: var(--accent-purple); }
+
+        .exp-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+        .exp-card h3 { font-size: 1.05rem; margin-bottom: .5rem; }
+        .exp-card p  { color: var(--text-muted); font-size: .88rem; }
+
+        /* ══════════════════════════════════════════════════════════════
+           CTA FINAL
+           ══════════════════════════════════════════════════════════════ */
+        .cta-section {
+            text-align: center; padding: 6rem 2rem;
+            background:
+                radial-gradient(ellipse at 50% 50%, rgba(0,229,255,.06) 0%, transparent 70%);
+        }
+
+        .cta-section h2 {
+            font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: 800;
+            margin-bottom: 1rem;
+        }
+
+        .cta-section p {
+            color: var(--text-muted); margin-bottom: 2rem;
+            max-width: 500px; margin-left: auto; margin-right: auto;
+        }
+
+        /* ══════════════════════════════════════════════════════════════
+           FOOTER
+           ══════════════════════════════════════════════════════════════ */
+        footer {
+            text-align: center; padding: 2rem; border-top: 1px solid var(--border);
+            color: var(--text-muted); font-size: .8rem;
+        }
+
+        /* ══════════════════════════════════════════════════════════════
+           ANIMATIONS
+           ══════════════════════════════════════════════════════════════ */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-up {
+            opacity: 0; transform: translateY(30px);
+            transition: opacity .6s ease-out, transform .6s ease-out;
+        }
+        .fade-up.visible { opacity: 1; transform: translateY(0); }
+
+        /* Barras animadas */
+        .tv-bar { width: 0; }
+        .animate-bars .tv-bar { transition: width 1.5s cubic-bezier(.25,.8,.25,1); }
+
+        /* ══════════════════════════════════════════════════════════════
+           RESPONSIVE
+           ══════════════════════════════════════════════════════════════ */
+        @media (max-width: 768px) {
+            .navbar-links { display: none; }
+            .flow { flex-direction: column; align-items: center; }
+            .flow-arrow { transform: rotate(90deg); padding: 0; }
+            .flow-step { max-width: 100%; }
+            .transparency-wrapper { grid-template-columns: 1fr; gap: 2rem; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     NAVBAR
+     ═══════════════════════════════════════════════════════════════════ -->
+<nav class="navbar">
+    <div class="navbar-brand">BLACKSMITH <span>/ RECRUIT</span></div>
+    <ul class="navbar-links">
+        <li><a href="#problema">Problema</a></li>
+        <li><a href="#solucion">Solución</a></li>
+        <li><a href="#proceso">Proceso</a></li>
+        <li><a href="#impacto">Impacto</a></li>
+        <li><a href="#transparencia">Transparencia</a></li>
+        <li><a href="#telemetria">Telemetría</a></li>
+    </ul>
+    <button class="navbar-cta" onclick="document.getElementById('cta').scrollIntoView({behavior:'smooth'})">
+        Solicitar Demo
+    </button>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     HERO
+     ═══════════════════════════════════════════════════════════════════ -->
+<section class="hero">
+        <!-- Video de fondo -->
+    <video class="hero-video" autoplay muted loop playsinline>
+        <source src="./game-gameplay.mp4" type="video/mp4">
+        <source src="./game-gameplay.webm" type="video/webm">
+
+        <!-- Fallback: si el video no carga, se muestra la imagen -->
+        <img src="./game-screenshot.png" alt="Blacksmith gameplay">
+    </video>
+
+    <!-- Overlay oscuro para legibilidad -->
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+        <div class="hero-badge">⚔️ Evaluación técnica reinventada</div>
+        <h1>
+            Reclutá talento tech<br>
+            con un <span class="gradient">videojuego de puzzles</span>
+        </h1>
+        <div class="hero-buttons">
+            <button class="btn-primary" onclick="document.getElementById('solucion').scrollIntoView({behavior:'smooth'})">
+                Ver cómo funciona
+            </button>
+            <button class="btn-secondary" onclick="document.getElementById('impacto').scrollIntoView({behavior:'smooth'})">
+                Ver métricas de impacto
+            </button>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     PROBLEMA
+     ═══════════════════════════════════════════════════════════════════ -->
+<section id="problema">
+    <div class="centered">
+        <span class="section-label stat-red">El problema</span>
+        <h2 class="section-title">El reclutamiento técnico está roto</h2>
+        <p class="section-subtitle">
+            Los CTOs pierden demasiado tiempo evaluando, las malas contrataciones cuestan fortunas,
+            los candidatos odian el proceso y nadie sabe por qué fue rechazado.
+        </p>
+    </div>
+
+    <div class="problem-grid">
+        <div class="problem-card fade-up">
+            <div class="problem-icon">⏱️</div>
+            <h3>Tiempo del CTO desperdiciado</h3>
+            <p>
+                El CTO dedica entre un 20% y 30% de su semana a filtrar CVs,
+                hacer entrevistas técnicas y evaluar code challenges.
+                Tiempo que no invierte en producto ni estrategia.
+            </p>
+            <span class="problem-stat stat-red">20–30% semanal</span>
+        </div>
+
+        <div class="problem-card fade-up">
+            <div class="problem-icon">💸</div>
+            <h3>Costo por error de contratación</h3>
+            <p>
+                Una mala contratación cuesta en promedio el 30% del salario anual
+                del puesto entre onboarding, desvinculación y re-búsqueda y
+                 hasta 3 veces el salario anual si se consideran retrasos en productos, 
+                 deuda técnica y daño moral al equipo
+            </p>
+            <span class="problem-stat stat-red">~30% salario anual</span>
+        </div>
+
+        <div class="problem-card fade-up">
+            <div class="problem-icon">😤</div>
+            <h3>Desalineación HR ↔ CTO</h3>
+            <p>
+                HR filtra con criterios genéricos. El CTO necesita evaluar
+                habilidades específicas. No hablan el mismo idioma técnico
+                y los candidatos caen entre las grietas.
+            </p>
+            <span class="problem-stat stat-orange">Proceso fragmentado</span>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     SOLUCIÓN — 3 ALGORITMOS
+     ═══════════════════════════════════════════════════════════════════ -->
+<section id="solucion">
+    <div class="centered">
+        <span class="section-label tag-cyan" style="border:1px solid rgba(0,229,255,.3);">La solución</span>
+        <h2 class="section-title">3 algoritmos, 1 videojuego</h2>
+        <p class="section-subtitle">
+            Blacksmith combina evaluación adaptativa, generación procedural
+            y telemetría en tiempo real en una experiencia de juego inmersiva.
+        </p>
+    </div>
+
+    <div class="algo-grid">
+        <!-- Algoritmo 1 -->
+        <div class="algo-card fade-up">
+            <span class="algo-number">01</span>
+            <div class="algo-icon eval">🧠</div>
+            <h3>Motor de Evaluación</h3>
+            <p>
+                Analiza el prompt de requerimientos del CTO y determina <strong>qué competencias evaluar</strong>:
+                resolución de problemas, diseño de sistemas, optimización, testing,
+                comunicación, escalabilidad y más.
+                Genera un formulario de validación automático.
+            </p>
+            <div class="algo-tags">
+                <span class="algo-tag tag-green">Análisis de competencias</span>
+                <span class="algo-tag tag-green">Formulario auto-generado</span>
+            </div>
+        </div>
+
+        <!-- Algoritmo 2 -->
+        <div class="algo-card fade-up">
+            <span class="algo-number">02</span>
+            <div class="algo-icon engine">⚙️</div>
+            <h3>Motor de Generación de Mapa</h3>
+            <p>
+                A partir de los resultados del evaluador, <strong>genera proceduralmente
+                el puzzle del videojuego</strong>. Cada nivel está diseñado para medir
+                las competencias específicas del puesto.
+                Ningún candidato juega el mismo mapa dos veces.
+            </p>
+            <div class="algo-tags">
+                <span class="algo-tag tag-cyan">Generación procedural</span>
+                <span class="algo-tag tag-cyan">Puzzles adaptativos</span>
+            </div>
+        </div>
+
+        <!-- Algoritmo 3 -->
+        <div class="algo-card fade-up">
+            <span class="algo-number">03</span>
+            <div class="algo-icon tele">📡</div>
+            <h3>Motor de Telemetría</h3>
+            <p>
+                Captura <strong>cada decisión, tiempo de reacción, patrón de resolución
+                y error</strong> en tiempo real. Genera un dashboard con métricas
+                de latencia, throughput, categorización de errores y scoring
+                por nivel (Junior / Middle / Senior).
+            </p>
+            <div class="algo-tags">
+                <span class="algo-tag tag-purple">Dashboard en vivo</span>
+                <span class="algo-tag tag-purple">Scoring automático</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     PROCESO / FLUJO
+     ═══════════════════════════════════════════════════════════════════ -->
+<section id="proceso">
+    <div class="centered">
+        <span class="section-label tag-cyan" style="border:1px solid rgba(0,229,255,.3);">Proceso</span>
+        <h2 class="section-title">Del prompt al resultado en 5 pasos</h2>
+        <p class="section-subtitle">
+            Un flujo simple que alinea a HR y CTO desde el inicio.
+        </p>
+    </div>
+
+    <div class="flow">
+        <div class="flow-step fade-up">
+            <div class="flow-step-number">1</div>
+            <h4>CTO envía prompt</h4>
+            <p>Describe el perfil técnico que necesita en lenguaje natural.</p>
+        </div>
+        <div class="flow-arrow">→</div>
+
+        <div class="flow-step fade-up">
+            <div class="flow-step-number">2</div>
+            <h4>Se genera formulario</h4>
+            <p>El motor de evaluación crea un formulario de competencias automático.</p>
+        </div>
+        <div class="flow-arrow">→</div>
+
+        <div class="flow-step fade-up">
+            <div class="flow-step-number">3</div>
+            <h4>CTO valida</h4>
+            <p>Revisa y ajusta los criterios. HR y CTO quedan alineados.</p>
+        </div>
+        <div class="flow-arrow">→</div>
+
+        <div class="flow-step fade-up">
+            <div class="flow-step-number">4</div>
+            <h4>Motor genera el juego</h4>
+            <p>Se crea un puzzle único calibrado para medir esas competencias.</p>
+        </div>
+        <div class="flow-arrow">→</div>
+
+        <div class="flow-step fade-up">
+            <div class="flow-step-number">5</div>
+            <h4>Candidato juega</h4>
+            <p>Juega el puzzle mientras la telemetría analiza todo en tiempo real.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     IMPACTO / MÉTRICAS
+     ═══════════════════════════════════════════════════════════════════ -->
+<section id="impacto">
+    <div class="centered">
+        <span class="section-label tag-green" style="border:1px solid rgba(57,255,20,.3);">Impacto</span>
+        <h2 class="section-title">Resultados medibles</h2>
+        <p class="section-subtitle">
+            Cada métrica representa una mejora real en tiempo, dinero y calidad de contratación.
+        </p>
+    </div>
+
+    <div class="impact-grid">
+        <div class="impact-card fade-up">
+            <div class="impact-before">20–30% del tiempo semanal</div>
+            <div class="impact-arrow-down">⬇️</div>
+            <div class="impact-after">0–5%</div>
+            <div class="impact-label">
+                Tiempo semanal del CTO<br>dedicado a reclutamiento
+            </div>
+        </div>
+
+        <div class="impact-card fade-up">
+            <div class="impact-before">~30% del salario anual</div>
+            <div class="impact-arrow-down">⬇️</div>
+            <div class="impact-after">~10%</div>
+            <div class="impact-label">
+                Riesgo de costo<br>por error de contratación
+            </div>
+        </div>
+
+        <div class="impact-card fade-up">
+            <div class="impact-before">HR y CTO desalineados</div>
+            <div class="impact-arrow-down">⬇️</div>
+            <div class="impact-after">1 prompt</div>
+            <div class="impact-label">
+                Para alinear requerimientos<br>entre HR y CTO
+            </div>
+        </div>
+
+        <div class="impact-card fade-up">
+            <div class="impact-before">Evaluaciones frustrantes</div>
+            <div class="impact-arrow-down">⬇️</div>
+            <div class="impact-after">🎮 Juego</div>
+            <div class="impact-label">
+                Frustración reemplazada<br>por recompensas y engagement
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     TRANSPARENCIA
+     ═══════════════════════════════════════════════════════════════════ -->
+<section id="transparencia">
+    <div class="transparency-wrapper">
+        <!-- Lado izquierdo: texto -->
+        <div class="transparency-content fade-up">
+            <span class="section-label tag-gold" style="border:1px solid rgba(255,215,0,.3);">Transparencia</span>
+            <h2>Cada rechazo tiene <span class="highlight-gold">una explicación exacta</span></h2>
+            <p>
+                En los procesos tradicionales, el candidato recibe un genérico
+                <em>"no avanzás en el proceso"</em> sin saber por qué.
+                Con Blacksmith, la telemetría registra cada acción del juego.
+                Si un candidato es rechazado, <strong>se sabe exactamente en qué falló</strong>,
+                en qué momento y con qué nivel de gravedad.
+            </p>
+
+            <ul class="transparency-features">
+                <li>
+                    <div class="feat-icon">📊</div>
+                    <div class="feat-text">
+                        <h4>Desglose por competencia</h4>
+                        <p>Cada habilidad evaluada tiene un score individual con evidencia de las acciones que lo generaron.</p>
+                    </div>
+                </li>
+                <li>
+                    <div class="feat-icon">🔍</div>
+                    <div class="feat-text">
+                        <h4>Trazabilidad completa</h4>
+                        <p>El Event Log registra cada decisión, error y tiempo de reacción. Nada queda en el aire.</p>
+                    </div>
+                </li>
+                <li>
+                    <div class="feat-icon">🤝</div>
+                    <div class="feat-text">
+                        <h4>Feedback accionable al candidato</h4>
+                        <p>Podés compartir el reporte con el candidato para que sepa exactamente qué mejorar. Eso construye marca empleadora.</p>
+                    </div>
+                </li>
+                <li>
+                    <div class="feat-icon">⚖️</div>
+                    <div class="feat-text">
+                        <h4>Decisiones sin sesgo</h4>
+                        <p>El rechazo se basa en datos cuantitativos puros, no en impresiones subjetivas. Defendible ante cualquier auditoría.</p>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Lado derecho: visual de reporte -->
+        <div class="transparency-visual fade-up" id="transparency-report">
+            <div class="tv-header">
+                <h4>Reporte de Evaluación</h4>
+                <span class="tv-badge badge-rejected">NO APROBADO</span>
+            </div>
+
+            <div class="tv-candidate">
+                <div class="tv-avatar">MG</div>
+                <div>
+                    <div class="tv-name">Martín García</div>
+                    <div class="tv-role">Postulación: Backend Senior</div>
+                </div>
+            </div>
+
+            <div class="tv-breakdown">
+                <div class="tv-skill">
+                    <span class="tv-skill-label">Resolución</span>
+                    <div class="tv-bar-bg"><div class="tv-bar high" data-width="85%"></div></div>
+                    <span class="tv-percent high">85%</span>
+                </div>
+                <div class="tv-skill">
+                    <span class="tv-skill-label">Implementación</span>
+                    <div class="tv-bar-bg"><div class="tv-bar good" data-width="72%"></div></div>
+                    <span class="tv-percent good">72%</span>
+                </div>
+                <div class="tv-skill">
+                    <span class="tv-skill-label">Diseño de sistema</span>
+                    <div class="tv-bar-bg"><div class="tv-bar mid" data-width="48%"></div></div>
+                    <span class="tv-percent mid">48%</span>
+                </div>
+                <div class="tv-skill">
+                    <span class="tv-skill-label">Escalabilidad</span>
+                    <div class="tv-bar-bg"><div class="tv-bar low" data-width="22%"></div></div>
+                    <span class="tv-percent low">22%</span>
+                </div>
+                <div class="tv-skill">
+                    <span class="tv-skill-label">Optimización</span>
+                    <div class="tv-bar-bg"><div class="tv-bar low" data-width="18%"></div></div>
+                    <span class="tv-percent low">18%</span>
+                </div>
+                <div class="tv-skill">
+                    <span class="tv-skill-label">Testing</span>
+                    <div class="tv-bar-bg"><div class="tv-bar mid" data-width="55%"></div></div>
+                    <span class="tv-percent mid">55%</span>
+                </div>
+            </div>
+
+            <div class="tv-verdict">
+                <p>
+                    <strong>Motivo de rechazo:</strong> El candidato demostró buena capacidad de
+                    resolución de problemas individuales pero <strong>falló en escalabilidad
+                    (22%) y optimización (18%)</strong>. Los datos de telemetría muestran que
+                    en el nivel 3 del puzzle eligió soluciones de fuerza bruta en lugar de
+                    patrones escalables, y en el nivel 5 no optimizó el throughput del sistema
+                    dentro del tiempo esperado.<br><br>
+                    <em>💡 Recomendación: Perfil apto para Middle. Puede re-postular como Senior en 6 meses
+                    tras reforzar diseño de sistemas distribuidos.</em>
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     TELEMETRÍA / DASHBOARD
+     ═══════════════════════════════════════════════════════════════════ -->
+<section id="telemetria">
+    <div class="centered">
+        <span class="section-label tag-purple" style="border:1px solid rgba(180,77,255,.3);">Telemetría</span>
+        <h2 class="section-title">Dashboard de análisis en tiempo real</h2>
+        <p class="section-subtitle">
+            Mientras el candidato juega, el dashboard muestra scoring por nivel,
+            historial de latencia, errores por categoría, throughput y más.
+        </p>
+    </div>
+
+    <div class="dashboard-preview fade-up">
+        <img src="file:///C:/Users/Usuario/Simple3DGame/Telemetry-Service/blacksmith-dashboard.png"
+             alt="Blacksmith Telemetry Dashboard"
+             onerror="this.parentElement.innerHTML='<div style=\'padding:4rem;text-align:center;color:var(--text-muted);\'>📊 Dashboard de telemetría — Imagen del dashboard en tiempo real</div>'">
+        <div class="overlay"></div>
+    </div>
+
+    <!-- Mini métricas debajo del dashboard -->
+    <div class="impact-grid" style="max-width:900px; margin-top:2.5rem;">
+        <div class="impact-card fade-up" style="padding:1.5rem;">
+            <div class="impact-after" style="font-size:1.6rem;">Junior · Middle · Senior</div>
+            <div class="impact-label">Scoring automático por nivel</div>
+        </div>
+        <div class="impact-card fade-up" style="padding:1.5rem;">
+            <div class="impact-after" style="font-size:1.6rem;">P50 · P90 · P99</div>
+            <div class="impact-label">Latencia de resolución</div>
+        </div>
+        <div class="impact-card fade-up" style="padding:1.5rem;">
+            <div class="impact-after" style="font-size:1.6rem;">Event Log</div>
+            <div class="impact-label">Trazabilidad completa de acciones</div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     EXPERIENCIA CANDIDATO
+     ═══════════════════════════════════════════════════════════════════ -->
+<section id="experiencia">
+    <div class="centered">
+        <span class="section-label tag-green" style="border:1px solid rgba(57,255,20,.3);">Experiencia</span>
+        <h2 class="section-title">¿Por qué un videojuego?</h2>
+        <p class="section-subtitle">
+            Reemplazar evaluaciones frustrantes por una experiencia de juego
+            cambia la percepción del candidato y mejora los datos que obtenés.
+        </p>
+    </div>
+
+    <div class="exp-grid">
+        <div class="exp-card fade-up">
+            <div class="exp-icon">🏆</div>
+            <h3>Recompensas, no castigos</h3>
+            <p>
+                El candidato recibe feedback positivo mientras avanza.
+                Las mecánicas de recompensa reducen la ansiedad
+                y revelan su potencial real.
+            </p>
+        </div>
+        <div class="exp-card fade-up">
+            <div class="exp-icon">🧩</div>
+            <h3>Puzzles, no interrogatorios</h3>
+            <p>
+                En lugar de una entrevista presionante, el candidato
+                resuelve desafíos lógicos en un entorno inmersivo
+                donde puede pensar con libertad.
+            </p>
+        </div>
+        <div class="exp-card fade-up">
+            <div class="exp-icon">📈</div>
+            <h3>Datos objetivos, no sesgos</h3>
+            <p>
+                La telemetría captura datos cuantitativos puros:
+                tiempos, patrones, errores. Sin sesgos de entrevistador
+                ni primeras impresiones engañosas.
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     CTA FINAL
+     ═══════════════════════════════════════════════════════════════════ -->
+<section class="cta-section" id="cta">
+    <h2>¿Listo para transformar<br>tu reclutamiento técnico?</h2>
+    <p>
+        Dejá de perder tiempo y dinero en procesos que no funcionan.
+        Probá Blacksmith y contratá mejor, más rápido, con transparencia total.
+    </p>
+    <div class="hero-buttons">
+        <button class="btn-primary">Solicitar Demo</button>
+        <button class="btn-secondary">Ver documentación</button>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     FOOTER
+     ═══════════════════════════════════════════════════════════════════ -->
+<footer>
+    <p>© 2026 Blacksmith — Reclutamiento técnico inteligente por videojuegos. Todos los derechos reservados.</p>
+</footer>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     SCROLL ANIMATIONS + BAR ANIMATIONS
+     ═══════════════════════════════════════════════════════════════════ -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Fade-up on scroll
+        const fadeObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.15 });
+
+        document.querySelectorAll('.fade-up').forEach(el => fadeObserver.observe(el));
+
+        // Animate transparency report bars when visible
+        const report = document.getElementById('transparency-report');
+        if (report) {
+            const barObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        report.classList.add('animate-bars');
+                        report.querySelectorAll('.tv-bar').forEach(bar => {
+                            bar.style.width = bar.getAttribute('data-width');
+                        });
+                        barObserver.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.3 });
+
+            barObserver.observe(report);
+        }
+    });
+</script>
+
+</body>
+</html>
